@@ -1,0 +1,40 @@
+{
+  "name": "agile-tracker",
+  "version": "0.0.1",
+  "main": "index.js",
+  "type": "module",
+  "start": "node dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "test": "vitest run",
+    "test:ui": "vitest",
+    "db:push": "prisma db push",
+    "cli": "npx tsx ./src/cli/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^6.17.0",
+    "@types/node": "^24.7.0",
+    "@types/uuid": "^10.0.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.1",
+    "inquirer": "^12.9.6",
+    "keytar": "^7.9.0",
+    "nostr-tools": "^2.17.0",
+    "sqlite3": "^5.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "uuid": "^13.0.0",
+    "websocket-polyfill": "^1.0.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "prisma": "^6.17.0",
+    "vitest": "^3.2.4"
+  }
+}
