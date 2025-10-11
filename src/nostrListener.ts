@@ -1,10 +1,10 @@
-import chalk from 'chalk';
+/* import chalk from 'chalk';
 import { getTickets } from './ticket.js';
-import { subscribeToTicketUpdates, verifyEventAuth } from './nostr.js';
+import { subscribeToTicketUpdates, verifyEventAuth } from './nostr.js' */;
 import { PrismaClient } from '@prisma/client';
 
 export function startNostrListener(prisma: PrismaClient) {
-  console.log(chalk.blue('Listening for Nostr updates...'));
+/*   console.log(chalk.blue('Listening for Nostr updates...'));
   getTickets(prisma).then(tickets => {
     if (tickets.length > 0) {
       const ticket = tickets[0]!;
@@ -20,5 +20,5 @@ export function startNostrListener(prisma: PrismaClient) {
         process.exit();
       });
     }
-  });
+  }) */;
 }

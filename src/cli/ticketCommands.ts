@@ -1,7 +1,7 @@
-import { Command } from 'commander';
+/* import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { getTickets, createTicket, updateTicketStatus, deleteTicket } from '../ticket.js';
+import { getTickets, createTicket, updateTicketState, deleteTicket } from '../ticket.js';
 import { PrismaClient } from '@prisma/client';
 import { publishTicketUpdate } from '../nostr.js';
 import { getActiveUserKeys } from '../identity.js';
@@ -14,14 +14,14 @@ const ticketCommand = new Command('ticket')
 ticketCommand
   .command('list')
   .description('List all tickets')
-  .option('-s, --status <status>', 'Filter by status')
+  .option('-s, --state <state>', 'Filter by state')
   .action(async (options) => {
-    const tickets = await getTickets(prisma, options.status ? { status: options.status } : undefined);
+    const tickets = await getTickets(prisma, options.state ? { state: options.state } : undefined);
 
     console.log(chalk.bold.blue('Tickets:'));
     tickets.forEach(ticket => {
       console.log(
-        `${chalk.green(ticket.uuid)} | ${chalk.cyan(ticket.status.padEnd(10))} | ${ticket.title}`
+        `${chalk.green(ticket.uuid)} | ${chalk.cyan(ticket.state.padEnd(10))} | ${ticket.title}`
       );
     });
   });
@@ -52,13 +52,14 @@ ticketCommand
       }
     ]);
 
-    const ticket = await createTicket(prisma, answers.title, answers.description, pubkey);
+    const ticket = await createTicket(prisma, )
+    //const ticket = await createTicket(prisma, answers.title, answers.description, pubkey);
 
     // Publish to Nostr
     await publishTicketUpdate(
       privateKey,
       ticket.uuid,
-      ticket.status,
+      ticket.state,
       `Ticket created: ${ticket.title}`
     );
 
@@ -68,7 +69,7 @@ ticketCommand
 // Update ticket command
 ticketCommand
   .command('update')
-  .description('Update ticket status')
+  .description('Update ticket state')
   .action(async () => {
     const userKeys = await getActiveUserKeys(prisma);
     if (!userKeys) {
@@ -90,17 +91,17 @@ ticketCommand
         name: 'ticketId',
         message: 'Select ticket to update:',
         choices: tickets.map(t => ({
-          name: `${t.title} (${t.status})`,
+          name: `${t.title} (${t.state})`,
           value: t.uuid
         }))
       }
     ]);
 
-    const { status } = await inquirer.prompt([
+    const { state } = await inquirer.prompt([
       {
         type: 'list',
-        name: 'status',
-        message: 'Select new status:',
+        name: 'state',
+        message: 'Select new state:',
         choices: [
           'backlog', 'started', 'finished',
           'delivered', 'accepted', 'rejected'
@@ -108,17 +109,17 @@ ticketCommand
       }
     ]);
 
-    await updateTicketStatus(prisma, ticketId, status);
+    await updateTicketStatus(prisma, ticketId, state);
 
     // Publish to Nostr
     await publishTicketUpdate(
       privateKey,
       ticketId,
-      status,
-      `Status updated to ${status}`
+      state,
+      `state updated to ${state}`
     );
 
-    console.log(chalk.green(`Ticket ${ticketId} updated to ${status}`));
+    console.log(chalk.green(`Ticket ${ticketId} updated to ${state}`));
   });
 
 // Delete ticket command
@@ -145,7 +146,7 @@ ticketCommand
         name: 'ticketId',
         message: 'Select ticket to delete:',
         choices: tickets.map(t => ({
-          name: `${t.title} (${t.status})`,
+          name: `${t.title} (${t.state})`,
           value: t.uuid
         }))
       }
@@ -174,4 +175,4 @@ ticketCommand
   });
 
 
-export { ticketCommand };
+export { ticketCommand }; */

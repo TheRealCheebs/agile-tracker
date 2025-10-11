@@ -14,7 +14,12 @@ export interface Identity {
   is_active: boolean;
 }
 
-export async function getActiveUserKeys(prisma: PrismaClient): Promise<{ pubkey: string; privateKey: Uint8Array } | null> {
+export type UserKeys = {
+  pubkey: string;
+  privateKey: Uint8Array;
+};
+
+export async function getActiveUserKeys(prisma: PrismaClient): Promise<UserKeys | null> {
   const activeUser = await getActiveIdentity(prisma);
   if (!activeUser) {
     return null;
@@ -28,6 +33,50 @@ export async function getActiveUserKeys(prisma: PrismaClient): Promise<{ pubkey:
   return { pubkey: userPubkey, privateKey: userPrivateKey }
 }
 
+export async function importIdentity(
+  prisma: PrismaClient,
+  name: string,
+  privateKeyHex: string
+): Promise<PrismaIdentity | null> {
+  try {
+    // TODO: validate private key format, it must be nesc and valid nostr key
+    const privateKey = hexToBytes(privateKeyHex);
+    const pubkey = getPublicKey(privateKey);
+
+    // Check if identity with this pubkey already exists
+    const existing = await prisma.identity.findUnique({
+      where: { pubkey }
+    });
+    if (existing) {
+      console.log('An identity with this public key already exists.');
+      return null;
+    }
+
+    // Store private key in keytar
+    await keytar.setPassword(SERVICE_NAME, pubkey, privateKeyHex);
+
+    // Create identity in database
+    // Deactivate all other identities
+    await prisma.identity.updateMany({
+      where: { is_active: true },
+      data: { is_active: false }
+    });
+
+    return await prisma.identity.create({
+      data: {
+        pubkey,
+        name,
+        created_at: Date.now(),
+        is_active: true
+      }
+    });
+  } catch (error) {
+    console.error('Failed to import identity:', error);
+    return null;
+  }
+}
+
+  
 export async function createIdentity(
   prisma: PrismaClient,
   name: string
