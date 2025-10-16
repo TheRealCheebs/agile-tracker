@@ -17,9 +17,16 @@ export interface NostrTicketEvent {
   kind: number;
 }
 
+  privateKey: Uint8Array,
+  ticketUuid: string,
+  projectUuid: string,
+  status: string,
+  content: string
+) {
 export async function publishTicketUpdate(
   privateKey: Uint8Array,
   ticketUuid: string,
+  projectUuid: string,
   status: string,
   content: string
 ) {
@@ -29,6 +36,7 @@ export async function publishTicketUpdate(
       created_at: Math.floor(Date.now() / 1000),
       tags: [
         ['d', ticketUuid],
+        ['project', projectUuid],
         ['status', status]
       ],
       content
@@ -37,6 +45,21 @@ export async function publishTicketUpdate(
   );
 
   return Promise.all(pool.publish(relays, event));
+}
+// Subscribe to all ticket updates for a project
+export function subscribeToProjectUpdates(projectUuid: string, callback: (event: NostrTicketEvent) => void) {
+  const filter = {
+    kinds: [TRACKER_KIND],
+    '#project': [projectUuid]
+  };
+
+  const sub = pool.subscribeMany(relays, filter, {
+    onevent(event: any) {
+      callback(event as NostrTicketEvent);
+    }
+  });
+
+  return () => sub.close();
 }
 
 export function verifyEventAuth(event: NostrTicketEvent, ownerPubkey: string): boolean {

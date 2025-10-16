@@ -28,7 +28,7 @@ export async function createProject(
   prisma: PrismaClient,
   name: string,
   creator_pubkey: string,
-  description?: string,
+  description: string,
   is_private: boolean = false,
   members: { pubkey: string; role?: string }[] = []
 ): Promise<PrismaProject> {
@@ -41,11 +41,11 @@ export async function createProject(
     data: {
       uuid: uuidv4(),
       name,
-      description: description ?? null,
+      description: description,
       is_private: is_private,
       created_at: Number(Date.now()),
       last_event_id: null,
-      last_event_created_at: null,
+      last_event_created_at: Number(Date.now()),
       members: {
         create: allMembers.map(m => ({
           pubkey: m.pubkey,
@@ -57,27 +57,42 @@ export async function createProject(
   });
 }
 
-export async function getProjects(prisma: PrismaClient): Promise<PrismaProject[]> {
+export async function getProjects(prisma: PrismaClient, pubKey: string): Promise<PrismaProject[]> {
   return await prisma.project.findMany({
+    where: {
+      OR: [
+        {
+          members: {
+            some: {
+              pubkey: pubKey, // pubkey needs to be a member
+            },
+          },
+        },
+        {
+          is_private: false, // or the project is public and it's been loaded
+        },
+      ],
+    },
     orderBy: { created_at: 'desc' }
   });
 }
 
-export async function getProjectById(prisma: PrismaClient, id: number): Promise<PrismaProject | null> {
+export async function getProjectById(prisma: PrismaClient, uuid: string): Promise<PrismaProject | null> {
   return await prisma.project.findUnique({
-    where: { id }
+    where: { uuid }
   });
 }
 
-export async function deleteProject(prisma: PrismaClient, id: number): Promise<void> {
+export async function deleteProject(prisma: PrismaClient, uuid: string): Promise<void> {
   await prisma.project.delete({
-    where: { id }
+    where: { uuid }
   });
 }
 
-export async function updateProject(prisma: PrismaClient, id: number, updates: Partial<{ name: string; description: string }>): Promise<PrismaProject> {
+export async function updateProject(prisma: PrismaClient, uuid: string, updates: Partial<{ name: string; description: string }>): Promise<PrismaProject> {
   return await prisma.project.update({
-    where: { id },
+    where: { uuid },
     data: updates
   });
-}   
+}
+

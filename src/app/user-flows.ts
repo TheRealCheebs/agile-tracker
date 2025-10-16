@@ -5,9 +5,9 @@ import { PrismaClient } from '@prisma/client';
 import type { Identity as PrismaIdentity } from '@prisma/client';
 import type { UserKeys } from '../identity.js';
 
-export async function createUserFlow(prisma: PrismaClient): Promise< UserKeys | null> {
+export async function createUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
   console.log('\n📋 Create New User\n');
-  
+
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -16,7 +16,7 @@ export async function createUserFlow(prisma: PrismaClient): Promise< UserKeys | 
       validate: input => input.trim() !== '' || 'User name is required'
     }
   ]);
-  
+
   const identity = await createIdentity(prisma, answers.name);
   if (!identity) {
     console.log(chalk.red('Failed to create user'));
@@ -30,12 +30,12 @@ export async function createUserFlow(prisma: PrismaClient): Promise< UserKeys | 
     return null;
   }
 
-  return { pubkey: userPubkey, privateKey: userPrivateKey }
+  return { pubKey: userPubkey, privateKey: userPrivateKey }
 }
 
-export async function importUserFlow(prisma: PrismaClient): Promise< UserKeys | null> {
+export async function importUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
   console.log('\n📋 Import User\n');
-  
+
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -50,7 +50,7 @@ export async function importUserFlow(prisma: PrismaClient): Promise< UserKeys | 
       validate: input => input.trim() !== '' || 'private key is required'
     }
   ]);
-  
+
   const identity = await importIdentity(prisma, answers.name, answers.privateKey);
   if (!identity) {
     console.log(chalk.red('Failed to import user'));
@@ -64,25 +64,25 @@ export async function importUserFlow(prisma: PrismaClient): Promise< UserKeys | 
     return null;
   }
 
-  return { pubkey: userPubkey, privateKey: userPrivateKey }
+  return { pubKey: userPubkey, privateKey: userPrivateKey }
 }
 
 export async function listUsersFlow(prisma: PrismaClient): Promise<void> {
   console.log('\n👥 List Users\n');
   getAllIdentities(prisma).then((identities: PrismaIdentity[]) => {
-      if (identities.length === 0) {
-          console.log(chalk.yellow('No users found'));
-          return;
-      }
-      console.log(chalk.bold.blue('Users:'));
-      identities.forEach((identity: PrismaIdentity) => {
-          const activeMarker = identity.is_active ? chalk.green(' (active)') : '';
-          console.log(`${chalk.cyan(identity.name)} | ${identity.pubkey}${activeMarker}`);
-      });
+    if (identities.length === 0) {
+      console.log(chalk.yellow('No users found'));
+      return;
+    }
+    console.log(chalk.bold.blue('Users:'));
+    identities.forEach((identity: PrismaIdentity) => {
+      const activeMarker = identity.is_active ? chalk.green(' (active)') : '';
+      console.log(`${chalk.cyan(identity.name)} | ${identity.pubkey}${activeMarker}`);
+    });
   });
 }
 
-export async function switchUserFlow(prisma: PrismaClient): Promise< UserKeys | null> {
+export async function switchUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
   const identities = await getAllIdentities(prisma);
   if (identities.length === 0) {
     console.log(chalk.yellow('No users found'));
@@ -107,14 +107,14 @@ export async function switchUserFlow(prisma: PrismaClient): Promise< UserKeys | 
     console.log(chalk.green(`Switched to user: ${identity.name} (${identity.pubkey})`));
     const userPrivateKey = await getPrivateKey(identity.pubkey);
     if (!userPrivateKey) return null;
-    return { pubkey: identity.pubkey, privateKey: userPrivateKey };
+    return { pubKey: identity.pubkey, privateKey: userPrivateKey };
   } else {
     console.log(chalk.red('User not found'));
     return null;
   }
 }
 
-export async function deleteUserFlow(prisma: PrismaClient): Promise< UserKeys | null> {
+export async function deleteUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
   const identities = await getAllIdentities(prisma);
   if (identities.length === 0) {
     // this shouldn't be possible, but just in case
@@ -188,7 +188,7 @@ export async function deleteUserFlow(prisma: PrismaClient): Promise< UserKeys | 
     console.log(chalk.green(`Switched to user: ${newIdentity.name} (${newIdentity.pubkey})`));
     const userPrivateKey = await getPrivateKey(newIdentity.pubkey);
     if (!userPrivateKey) return null;
-    return { pubkey: newIdentity.pubkey, privateKey: userPrivateKey };
+    return { pubKey: newIdentity.pubkey, privateKey: userPrivateKey };
   } else {
     console.log(chalk.red('Failed to set new active user.'));
     return null;

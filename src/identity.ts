@@ -7,15 +7,15 @@ import type { Identity as PrismaIdentity } from '@prisma/client';
 const SERVICE_NAME = 'agile-tracker';
 
 export interface Identity {
-  pubkey: string;
+  pubKey: string;
   name: string;
-  created_at: number;
-  last_used: number;
-  is_active: boolean;
+  createdAt: number;
+  lastUsed: number;
+  isActive: boolean;
 }
 
 export type UserKeys = {
-  pubkey: string;
+  pubKey: string;
   privateKey: Uint8Array;
 };
 
@@ -30,7 +30,7 @@ export async function getActiveUserKeys(prisma: PrismaClient): Promise<UserKeys 
     return null;
   }
 
-  return { pubkey: userPubkey, privateKey: userPrivateKey }
+  return { pubKey: userPubkey, privateKey: userPrivateKey }
 }
 
 export async function importIdentity(
@@ -41,11 +41,11 @@ export async function importIdentity(
   try {
     // TODO: validate private key format, it must be nesc and valid nostr key
     const privateKey = hexToBytes(privateKeyHex);
-    const pubkey = getPublicKey(privateKey);
+    const pubKey = getPublicKey(privateKey);
 
     // Check if identity with this pubkey already exists
     const existing = await prisma.identity.findUnique({
-      where: { pubkey }
+      where: { pubkey: pubKey }
     });
     if (existing) {
       console.log('An identity with this public key already exists.');
@@ -53,7 +53,7 @@ export async function importIdentity(
     }
 
     // Store private key in keytar
-    await keytar.setPassword(SERVICE_NAME, pubkey, privateKeyHex);
+    await keytar.setPassword(SERVICE_NAME, pubKey, privateKeyHex);
 
     // Create identity in database
     // Deactivate all other identities
@@ -64,9 +64,10 @@ export async function importIdentity(
 
     return await prisma.identity.create({
       data: {
-        pubkey,
-        name,
+        pubkey: pubKey,
+        name: name,
         created_at: Date.now(),
+        last_used: Date.now(),
         is_active: true
       }
     });
@@ -76,47 +77,48 @@ export async function importIdentity(
   }
 }
 
-  
+
 export async function createIdentity(
   prisma: PrismaClient,
   name: string
 ): Promise<PrismaIdentity> {
   let userPrivateKey = generateSecretKey();
-  const pubkey = getPublicKey(userPrivateKey);
+  const pubKey = getPublicKey(userPrivateKey);
   const privateKeyHex = bytesToHex(userPrivateKey);
-  await keytar.setPassword(SERVICE_NAME, pubkey, privateKeyHex);
+  await keytar.setPassword(SERVICE_NAME, pubKey, privateKeyHex);
 
   return await prisma.identity.create({
     data: {
-      pubkey,
-      name,
+      pubkey: pubKey,
+      name: name,
       created_at: Date.now(),
+      last_used: Date.now(),
       is_active: true
     }
   });
 }
 
-export async function getPrivateKey(pubkey: string): Promise<Uint8Array | null> {
-  const privateKeyHex = await keytar.getPassword(SERVICE_NAME, pubkey);
+export async function getPrivateKey(pubKey: string): Promise<Uint8Array | null> {
+  const privateKeyHex = await keytar.getPassword(SERVICE_NAME, pubKey);
   if (!privateKeyHex) {
     return null;
   }
   return hexToBytes(privateKeyHex);
 }
 
-export async function removeIdentityByKey(prisma: PrismaClient, pubkey: string): Promise<boolean> {
+export async function removeIdentityByKey(prisma: PrismaClient, pubKey: string): Promise<boolean> {
   // Use a transaction to ensure atomicity
   return await prisma.$transaction(async (tx) => {
     // Delete from DB first
     const dbResult = await tx.identity.deleteMany({
-      where: { pubkey }
+      where: { pubkey: pubKey }
     });
     if (dbResult.count === 0) {
       return false; // Nothing deleted from DB
     }
 
     // Then delete from keytar
-    const deletedFromKeytar = await keytar.deletePassword(SERVICE_NAME, pubkey);
+    const deletedFromKeytar = await keytar.deletePassword(SERVICE_NAME, pubKey);
     if (!deletedFromKeytar) {
       // Throw to roll back DB deletion
       throw new Error('Failed to delete from keytar, rolling back DB');

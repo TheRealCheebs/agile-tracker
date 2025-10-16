@@ -4,12 +4,18 @@ export function clearScreen() {
   process.stdout.write('\x1b[2J\x1b[0f');
 }
 
-export function showHeader() {
+export function showHeader(user: string, project: string) {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║                    Nostr Project Manager                      ║
+║                    Nostr Project Manager                     ║
 ╚══════════════════════════════════════════════════════════════╝
 `);
+  if (user !== "") {
+    console.log(`User: ${user}`);
+  }
+  if (project !== "") {
+    console.log(`Project: ${project}`);
+  }
 }
 
 export async function pauseBeforeContinue() {
