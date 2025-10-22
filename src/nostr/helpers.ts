@@ -1,0 +1,22 @@
+import { SimplePool } from 'nostr-tools';
+//import type { Event } from 'nostr-tools/lib/types';
+
+export async function getLastNostrEvents(relays: string[], kinds: number[], limit: number = 10) {
+  const pool = new SimplePool();
+  const events = pool.querySync(
+    relays,
+    {
+      kinds: kinds,
+      limit: limit
+    },
+  );
+  if (events) {
+    console.log('it exists indeed on this relay:', events)
+    // console.log('events on the relay:\n');
+    // events.forEach((e: Event) => {
+    //   console.log(e);
+    // })
+  } else {
+    console.log('no events found');
+  }
+}

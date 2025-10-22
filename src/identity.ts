@@ -3,21 +3,9 @@ import { getPublicKey, generateSecretKey } from 'nostr-tools';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils' // already an installed dependency
 import { PrismaClient } from '@prisma/client';
 import type { Identity as PrismaIdentity } from '@prisma/client';
+import type { UserKeys } from './interfaces/identity.js';
 
 const SERVICE_NAME = 'agile-tracker';
-
-export interface Identity {
-  pubKey: string;
-  name: string;
-  createdAt: number;
-  lastUsed: number;
-  isActive: boolean;
-}
-
-export type UserKeys = {
-  pubKey: string;
-  privateKey: Uint8Array;
-};
 
 export async function getActiveUserKeys(prisma: PrismaClient): Promise<UserKeys | null> {
   const activeUser = await getActiveIdentity(prisma);

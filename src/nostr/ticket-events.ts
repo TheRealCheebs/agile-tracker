@@ -33,7 +33,7 @@ export async function createTicketNostrEvent({
   delegatorPrivkey: Uint8Array;
   delegateePrivkey: Uint8Array;
 }) {
-  // 1. Create delegation token (delegator -> delegatee)
+
   const delegation = nip26.createDelegation(
     delegatorPrivkey,
     getPublicKey(delegateePrivkey),
@@ -44,7 +44,6 @@ export async function createTicketNostrEvent({
     }
   );
 
-  // 2. Create the ticket event (kind 30001, d:ticket-uuid)
   const event = {
     kind: NOSTR_DELEGATION_KIND_TICKET,
     pubkey: getPublicKey(delegateePrivkey),
@@ -53,6 +52,7 @@ export async function createTicketNostrEvent({
       ['d', ticket.uuid],
       ['project', ticket.projectUuid],
       ['delegation', delegation.from, delegation.cond, delegation.sig],
+      ['status', ticket.status],
     ],
     content: JSON.stringify(ticket),
   };

@@ -21,7 +21,7 @@ model Project {
   description           String
   is_private            Boolean   @default(false)
   created_at            BigInt
-  last_event_id         String?
+  last_event_id         String
   last_event_created_at BigInt
   members               ProjectMember[]
   tickets               Ticket[]

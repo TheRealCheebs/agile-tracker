@@ -3,9 +3,88 @@ import chalk from 'chalk';
 import { createIdentity, importIdentity, getPrivateKey, getAllIdentities, setActiveIdentityByName, removeIdentityByKey } from '../identity.js';
 import { PrismaClient } from '@prisma/client';
 import type { Identity as PrismaIdentity } from '@prisma/client';
-import type { UserKeys } from '../identity.js';
+import type { UserKeys } from '../interfaces/identity.js';
 
-export async function createUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
+const emptyUserKeys: UserKeys = { pubKey: '', privateKey: new Uint8Array() };
+
+export async function mainUsersFlow(prisma: PrismaClient): Promise<UserKeys> {
+
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'User Actions:',
+      choices: [
+        'Create User',
+        'Import User',
+        'List Users',
+        'Switch User',
+        'Delete User',
+        'Back to Main Menu',
+      ],
+    },
+  ]);
+
+  switch (action) {
+    case 'Create User':
+      const userKeys = await createUser(prisma);
+      if (userKeys) return userKeys;
+      break;
+    case 'Import User':
+      const importedKeys = await importUser(prisma);
+      if (importedKeys) return importedKeys;
+      break;
+    case 'List Users':
+      console.log('Listing users...');
+      break;
+    case 'Switch User':
+      const switchedKeys = await switchUser(prisma);
+      if (switchedKeys) return switchedKeys;
+      break;
+    case 'Delete User':
+      const updatedUser = await deleteUser(prisma);
+      if (updatedUser) return updatedUser;
+      break;
+    case 'Back to Main Menu':
+      break;
+  }
+  return emptyUserKeys;
+}
+
+export async function noUserFlow(prisma: PrismaClient): Promise<UserKeys> {
+  let running = true;
+
+  while (running) {
+    console.log('No active user found. Please create or import a user.');
+    const { action } = await inquirer.prompt([{
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        'Create User',
+        'Import User',
+        'Exit'
+      ],
+    }]);
+
+    switch (action) {
+      case 'Create User':
+        const userKeys = await createUser(prisma);
+        if (userKeys) return userKeys;
+        break;
+      case 'Import User':
+        const importedKeys = await importUser(prisma);
+        if (importedKeys) return importedKeys;
+        break;
+      case 'Exit':
+        // should cleanup before exiting.
+        process.exit(0);
+    }
+  }
+  return emptyUserKeys;
+}
+
+async function createUser(prisma: PrismaClient): Promise<UserKeys | null> {
   console.log('\n📋 Create New User\n');
 
   const answers = await inquirer.prompt([
@@ -33,7 +112,7 @@ export async function createUserFlow(prisma: PrismaClient): Promise<UserKeys | n
   return { pubKey: userPubkey, privateKey: userPrivateKey }
 }
 
-export async function importUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
+async function importUser(prisma: PrismaClient): Promise<UserKeys | null> {
   console.log('\n📋 Import User\n');
 
   const answers = await inquirer.prompt([
@@ -67,7 +146,7 @@ export async function importUserFlow(prisma: PrismaClient): Promise<UserKeys | n
   return { pubKey: userPubkey, privateKey: userPrivateKey }
 }
 
-export async function listUsersFlow(prisma: PrismaClient): Promise<void> {
+async function listUsers(prisma: PrismaClient): Promise<void> {
   console.log('\n👥 List Users\n');
   getAllIdentities(prisma).then((identities: PrismaIdentity[]) => {
     if (identities.length === 0) {
@@ -82,7 +161,7 @@ export async function listUsersFlow(prisma: PrismaClient): Promise<void> {
   });
 }
 
-export async function switchUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
+async function switchUser(prisma: PrismaClient): Promise<UserKeys | null> {
   const identities = await getAllIdentities(prisma);
   if (identities.length === 0) {
     console.log(chalk.yellow('No users found'));
@@ -114,7 +193,7 @@ export async function switchUserFlow(prisma: PrismaClient): Promise<UserKeys | n
   }
 }
 
-export async function deleteUserFlow(prisma: PrismaClient): Promise<UserKeys | null> {
+async function deleteUser(prisma: PrismaClient): Promise<UserKeys | null> {
   const identities = await getAllIdentities(prisma);
   if (identities.length === 0) {
     // this shouldn't be possible, but just in case
@@ -166,7 +245,7 @@ export async function deleteUserFlow(prisma: PrismaClient): Promise<UserKeys | n
   const remaining = await getAllIdentities(prisma);
   if (remaining.length === 0) {
     console.log(chalk.yellow('No users left. You must create or import a new user.'));
-    // Optionally, call createUserFlow or importUserFlow here
+    // Optionally, call createUser or importUser here
     return null;
   }
 
