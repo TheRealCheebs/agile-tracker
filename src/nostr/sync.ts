@@ -2,9 +2,9 @@ import { SimplePool } from 'nostr-tools';
 import type { Event, Filter } from 'nostr-tools/lib/types';
 import type { SubCloser } from 'nostr-tools/lib/types/abstract-pool';
 import { NOSTR_GIFT_WRAP_KIND, NOSTR_PROJECT_KIND, NOSTR_TICKET_KIND } from './../constants.ts';
-import { nostrEventToProject, getPrivateProject } from '../services/nostr/projects.js';
-import type { Project } from '../interfaces/project.js';
-import type { UserKeys } from '../interfaces/identity.js';
+import { nostrEventToProject, getPrivateProject } from '@services/nostr/projects.js';
+import type { Project } from '@interfaces/project.js';
+import type { UserKeys } from '@interfaces/identity.js';
 
 // Helper to extract tag values from a Nostr event
 export function getTagValue(event: Event, tag: string): string[] {

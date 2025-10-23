@@ -1,18 +1,15 @@
-export interface Project {
+export interface Ticket {
   uuid: string;
-  name: string;
+  projectUuid: string;
+  title: string;
+  type: string;
   description: string;
-  isPrivate: boolean;
+  state: string;
+  parentUuid: string;
+  creatorPubkey: string;
   createdAt: number;
-  lastEventId?: string | null;
-  lastEventCreatedAt?: number | null;
-  members: ProjectMember[];
-  tickets: string[];
-}
-
-export interface ProjectMember {
-  projectId: string;
-  pubKey: string;
-  role: string;
-  createdAt: number;
+  updatedAt: number;
+  lastEventId: string;
+  lastEventCreatedAt: number;
+  childrenUuids: string[];
 }

@@ -1,20 +1,20 @@
 import inquirer from 'inquirer';
 import { PrismaClient } from '@prisma/client';
-import { getActiveUserKeys } from '../identity.js';
+import { getActiveUserKeys } from '@services/prisma/identity.js';
 
-import { mainUsersFlow, noUserFlow } from '../tui/user-flows.js';
-import { mainProjectsFlow } from '../tui/project-flows.js';
-import { mainTicketsFlow } from '../tui/ticket-flows.js';
-import { mainSettingsFlow } from '../tui/settings-flows.js';
-import { clearScreen, showHeader, pauseBeforeContinue } from '../tui/ui-utils.js';
+import { mainUsersFlow, noUserFlow } from '@tui/user-flows.js';
+import { mainProjectsFlow } from '@tui/project-flows.js';
+import { mainTicketsFlow } from '@tui/ticket-flows.js';
+import { mainSettingsFlow } from '@tui/settings-flows.js';
+import { clearScreen, showHeader, pauseBeforeContinue } from '@tui/ui-utils.js';
 
-import { getProjects, updateProject } from '../services/prisma/project.js';
-import { updateTicket } from '../services/ticket.js';
+import { getProjects, updateProject } from '@services/prisma/project.js';
+import { updateTicket } from '@services/prisma/ticket.js';
 import { subscribeToProjectUpdates } from '../nostr/sync.js';
 import { listRelays } from '../settings.js';
 import { initNostr } from '../nostr/utils.js';
 
-import type { UserKeys } from '../interfaces/identity.js';
+import type { UserKeys } from '@interfaces/identity.js';
 import type { SubCloser } from 'nostr-tools/lib/types/abstract-pool';
 
 const subscriptions: SubCloser[] = [];
@@ -36,6 +36,7 @@ async function main() {
       }
       // Clear screen and show header
       clearScreen();
+      // TODO: list the users name
       showHeader(userKeys.pubKey, currentProject);
       [userKeys, currentProject, running] = await mainMenu(prisma, userKeys, currentProject);
 
@@ -98,8 +99,10 @@ async function initializeApp(prisma: PrismaClient): Promise<UserKeys | null> {
 
   // load config
   const relays = await listRelays();
-  // TODO: what if it can't connect...
-  initNostr(relays);
+  initNostr(relays).catch((error) => {
+    // we need to set offline mode or something here.
+    console.error('Error initializing Nostr:', error);
+  });
 
   // Load user keys
   let userKeys = await getActiveUserKeys(prisma);
@@ -126,12 +129,9 @@ async function initializeApp(prisma: PrismaClient): Promise<UserKeys | null> {
         updateTicket(prisma, ticketEvent.id, partial);
       },
     );
+    // TODO: save these subscriptions to the database? so they can be loaded on startup.
     subscriptions.push(sub);
   })
-
-
-
-
 
   // Any other initialization tasks
   console.log('✅ Application initialized');

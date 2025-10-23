@@ -2,12 +2,14 @@
 import inquirer from 'inquirer';
 import { PrismaClient } from '@prisma/client';
 
-import { createProject } from '../services/project.ts';
-import { saveNewProject, getProjects } from '../services/prisma/project.js';
-import { createAndPublishPrivateProject, createAndPublishProject } from '../services/nostr/projects.js';
+import { createProject } from '@services/project.ts';
+import { saveNewProject, getProjects, updateProject } from '@services/prisma/project.js';
+import { createAndPublishPrivateProject, createAndPublishProject } from '@services/nostr/projects.js';
+import { formatNostrTimestamp } from 'src/nostr/helpers';
+import { getAllProjectsFromRelay } from 'src/nostr/utils';
 
-import type { Project as PrismaProject } from '@prisma/client';
-import type { UserKeys } from '../interfaces/identity';
+import type { UserKeys } from '@interfaces/identity';
+import type { Project } from '@interfaces/project';
 
 export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys): Promise<string> {
   let projectUuid: string = "";
@@ -22,7 +24,9 @@ export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys)
         'Import Project',
         'List Projects',
         'Switch Project',
-        'View Project Hierarchy',
+        // TODO 'Update Project'
+        // TODO: add a sync project option
+        'Show All From Relay',
         'Back to Main Menu',
       ],
     },
@@ -34,7 +38,7 @@ export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys)
       projectUuid = created ?? "";
       break;
     case 'Import Project':
-      console.log('Importing project...');
+      console.log('TODO: Importing project...');
       break;
     case 'List Projects':
       await listProjectsFlow(prisma, userKeys.pubKey);
@@ -45,8 +49,8 @@ export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys)
         projectUuid = switched;
       }
       break;
-    case 'View Project Hierarchy':
-      console.log('Viewing project hierarchy...');
+    case 'Show All From Relay':
+      await showAllProjectsOnRelayFlow();
       break;
     case 'Back to Main Menu':
       break;
@@ -108,10 +112,19 @@ async function createProjectFlow(prisma: PrismaClient, userKeys: UserKeys): Prom
     );
 
     saveNewProject(prisma, project);
-    if (project.isPrivate) {
-      createAndPublishPrivateProject(project, userKeys, project.members);
-    } else {
-      createAndPublishProject(project, userKeys);
+    try {
+      if (project.isPrivate) {
+        const privateEvent = await createAndPublishPrivateProject(project, userKeys, project.members);
+        project.lastEventId = privateEvent.id;
+        project.lastEventCreatedAt = privateEvent.created_at;
+      } else {
+        const event = await createAndPublishProject(project, userKeys);
+        project.lastEventId = event.id;
+        project.lastEventCreatedAt = event.created_at;
+      }
+      updateProject(prisma, project);
+    } catch (relayError) {
+      console.warn(" Failed to send project to relay:", relayError)
     }
     console.log(`\n✅ Project created successfully!`);
     console.log(`   UUID: ${project.uuid}`);
@@ -160,10 +173,7 @@ export async function listProjectsFlow(prisma: PrismaClient, pubkey: string) {
     },
     ]);
 
-    const project = projects.find((p) => p.uuid === project_uuid);
-    if (project) {
-      await showProjectDetails(project);
-    }
+    await getProjectDetails(prisma, project_uuid);
   }
 }
 
@@ -211,17 +221,103 @@ export async function switchProjectsFlow(prisma: PrismaClient, pubkey: string): 
   return project_uuid;
 }
 
-// TODO, fix all of the prisma stuff in here, just have it be the project.
-async function showProjectDetails(project: PrismaProject) {
-  console.log('\n📋 Project Details\n');
-  console.log(`Name: ${project.name}`);
-  console.log(`UUID: ${project.uuid}`);
-  console.log(`Private: ${project.is_private ? 'Yes' : 'No'}`);
+export async function getProjectDetails(prisma: PrismaClient, projectId: string): Promise<void> {
+  try {
+    // Fetch the project details, including members and tickets
+    const project = await prisma.project.findUnique({
+      where: { uuid: projectId },
+      include: {
+        members: true, // Include project members
+        tickets: true, // Include project tickets
+      },
+    });
 
-  if (project.description) {
-    console.log(`\nDescription:\n${project.description}`);
+    if (!project) {
+      console.log("Project not found.");
+      return;
+    }
+
+    console.log(`Project: ${project.name}`);
+    console.log(`Description: ${project.description}`);
+    console.log(`Private: ${project.is_private ? "Yes" : "No"}`);
+    console.log(`Last Event ID: ${project.last_event_id}`);
+    console.log(`Last Time: ${formatNostrTimestamp(project.last_event_created_at)}`);
+
+    // List project tickets
+    console.log("Tickets:");
+    if (project.tickets.length > 0) {
+      project.tickets.forEach((ticket, index) => {
+        console.log(`  ${index + 1}. ${ticket}`);
+      });
+    } else {
+      console.log("  No tickets available.");
+    }
+
+
+    // If the project is not private, show admin members
+    if (!project.is_private) {
+      console.log("Admin Members:");
+      const adminMembers = project.members.filter((member) => member.role === "admin");
+      if (adminMembers.length > 0) {
+        adminMembers.forEach((admin) => {
+          console.log(`  - ${admin.pubkey}`);
+        });
+      } else {
+        console.log("  No admin members.");
+      }
+    } else {
+      // List project members on private projects
+      console.log("Members:");
+      project.members.forEach((member) => {
+        console.log(`  - ${member.pubkey} (${member.role})`);
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching project details:", error);
   }
+}
 
-  // Show project members, epics, tickets, etc.
-  // ...
+async function showAllProjectsOnRelayFlow(): Promise<void> {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'limit',
+      message: 'Number of projects to show'
+    }
+  ]);
+
+  const projects: Project[] = await getAllProjectsFromRelay(answers.limit);
+
+  projects.forEach((project) => {
+    const date = new Date(project.lastEventCreatedAt * 1000); // Convert milliseconds to a Date object
+    // Format the date to a readable string
+    console.log(`Project: ${project.name}`);
+    console.log(`Description: ${project.description}`);
+    console.log(`Private: ${project.isPrivate ? "Yes" : "No"}`);
+    console.log(`Last Event ID: ${project.lastEventId}`);
+    console.log(`Last Time: ${date.toLocaleString()}`);
+
+    // List project tickets
+    // console.log("Tickets:");
+    // if (project.tickets.length > 0) {
+    //   project.tickets.forEach((ticket) => {
+    //     console.log(`${ticket}`);
+    //   });
+    // } else {
+    //   console.log("  No tickets available.");
+    // }
+
+    // The project is not private, show admin members
+    if (!project.isPrivate) {
+      console.log("Admin Members:");
+      const adminMembers = project.members.filter((member) => member.role === "admin");
+      if (adminMembers.length > 0) {
+        adminMembers.forEach((admin) => {
+          console.log(`  - ${admin.pubKey}`);
+        });
+      } else {
+        console.log("  No admin members.");
+      }
+    }
+  });
 }

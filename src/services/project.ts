@@ -30,8 +30,9 @@ export function createProject(
     description,
     isPrivate,
     createdAt: createdTime,
-    lastEventId: null,
+    lastEventId: "",
     lastEventCreatedAt: createdTime,
     members: projectMembers,
+    tickets: [],
   } as Project; // Ensure the returned object matches the Project type
 }

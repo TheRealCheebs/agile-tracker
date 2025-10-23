@@ -20,3 +20,8 @@ export async function getLastNostrEvents(relays: string[], kinds: number[], limi
     console.log('no events found');
   }
 }
+
+export function formatNostrTimestamp(timestamp: BigInt): string {
+  const date = new Date(Number(timestamp)); // Convert milliseconds to a Date object
+  return date.toLocaleString(); // Format the date to a readable string
+}

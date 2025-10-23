@@ -1,26 +1,27 @@
 import { nip44, finalizeEvent } from 'nostr-tools';
 import { randomBytes } from '@noble/hashes/utils'; // or use crypto.getRandomValues in browser
-import { NOSTR_GIFT_WRAP_KIND, NOSTR_PROJECT_KIND } from '../../constants.ts'
+import { NOSTR_GIFT_WRAP_KIND, NOSTR_TICKET_KIND } from '../../constants.ts'
 import { publishToRelays } from '../../nostr/utils.js';
 
-import type { Project, ProjectMember } from '@interfaces/project.js';
+import type { Ticket } from '@interfaces/ticket.js';
+import type { ProjectMember } from '@interfaces/project.js';
 import type { UserKeys } from '@interfaces/identity.js';
 import type { NostrEvent, EventTemplate } from 'nostr-tools';
 
-export async function createAndPublishPrivateProject(
-  project: Project,
+export async function createAndPublishPrivateTicket(
+  ticket: Ticket,
   userKeys: UserKeys,
   projectMembers: ProjectMember[]
 ): Promise<NostrEvent> {
 
   // Create a rumor (NIP-17)
   const rumor = finalizeEvent({
-    kind: NOSTR_PROJECT_KIND,
+    kind: NOSTR_TICKET_KIND,
     created_at: Math.floor(Date.now() / 1000),
-    content: JSON.stringify(project),
+    content: JSON.stringify(ticket),
     tags: [
-      ['d', project.uuid],
-      ['name', project.name],
+      ['d', ticket.uuid],
+      ['project-uuid', ticket.projectUuid],
       ['private', 'true'],
     ]
   }, userKeys.privateKey);
@@ -36,56 +37,8 @@ export async function createAndPublishPrivateProject(
       content: nip44.encrypt(JSON.stringify(rumor), converKey, nonce),
       tags: [
         ['p', member.pubKey],
-        ['project-uuid', project.uuid],
-        ['type', 'project'],
-      ]
-    }, userKeys.privateKey);
-    wraps.push(wrap);
-  }
-
-  // Publish all wraps
-  for (const wrap of wraps) {
-    await publishToRelays(wrap);
-  }
-
-  return rumor;
-}
-export async function updateAndPublishPrivateProject(
-  project: Project,
-  userKeys: UserKeys,
-  projectMembers: ProjectMember[],
-  updatedTag: string,
-  propertyTag: string
-): Promise<NostrEvent> {
-
-  // Create a rumor (NIP-17)
-  const rumor = finalizeEvent({
-    kind: NOSTR_PROJECT_KIND,
-    created_at: Math.floor(Date.now() / 1000),
-    content: JSON.stringify(project),
-    tags: [
-      ['d', project.uuid],
-      ['name', project.name],
-      ['private', 'true'],
-      ['updated', updatedTag],
-      ['property', propertyTag],
-      ['e', project.lastEventId],
-    ]
-  }, userKeys.privateKey);
-
-  // Create gift wraps for each member
-  const wraps = [];
-  for (const member of projectMembers) {
-    const converKey = nip44.getConversationKey(userKeys.privateKey, member.pubKey);  // Ensure conversation key exists
-    const nonce = randomBytes(24); // 24 random bytes
-    const wrap = finalizeEvent({
-      kind: NOSTR_GIFT_WRAP_KIND,
-      created_at: Math.floor(Date.now() / 1000),
-      content: nip44.encrypt(JSON.stringify(rumor), converKey, nonce),
-      tags: [
-        ['p', member.pubKey],
-        ['project-uuid', project.uuid],
-        ['type', 'project'],
+        ['project-uuid', ticket.projectUuid],
+        ['type', 'ticket'],
       ]
     }, userKeys.privateKey);
     wraps.push(wrap);
@@ -99,18 +52,18 @@ export async function updateAndPublishPrivateProject(
   return rumor;
 }
 
-export async function createAndPublishProject(
-  project: Project,
+export async function createAndPublishTicket(
+  ticket: Ticket,
   userKeys: UserKeys
 ): Promise<NostrEvent> {
 
   const eventTemplate: EventTemplate = {
-    kind: NOSTR_PROJECT_KIND,
+    kind: NOSTR_TICKET_KIND,
     created_at: Math.floor(Date.now() / 1000),
-    content: JSON.stringify(project),
+    content: JSON.stringify(ticket),
     tags: [
-      ['d', project.uuid],
-      ['name', project.name],
+      ['d', ticket.uuid],
+      ['project-uuid', ticket.projectUuid],
       ['private', 'false'],
     ]
   };
@@ -120,24 +73,20 @@ export async function createAndPublishProject(
   return signed;
 }
 
-export async function updateAndPublishProject(
-  project: Project,
-  userKeys: UserKeys,
-  updatedTag: string,
-  propertyTag: string
+export async function updateAndPublishTicket(
+  ticket: Ticket,
+  userKeys: UserKeys
 ): Promise<NostrEvent> {
 
   const eventTemplate: EventTemplate = {
-    kind: NOSTR_PROJECT_KIND,
+    kind: NOSTR_TICKET_KIND,
     created_at: Math.floor(Date.now() / 1000),
-    content: JSON.stringify(project),
+    content: JSON.stringify(ticket),
     tags: [
-      ['d', project.uuid],
-      ['name', project.name],
+      ['d', ticket.uuid],
+      ['project-uuid', ticket.projectUuid],
       ['private', 'false'],
-      ['updated', updatedTag],
-      ['property', propertyTag],
-      ['e', project.lastEventId],
+      ['e', ticket.lastEventId],
     ]
   };
 
@@ -146,30 +95,62 @@ export async function updateAndPublishProject(
   return signed;
 }
 
-export function nostrEventToProject(event: NostrEvent): Project {
+export async function deleteTicket(
+  ticketEventId: string,
+  userKeys: UserKeys,
+  reason: string = "Deleted by user"
+): Promise<NostrEvent> {
+  try {
+    // Step 1: Create the deletion event
+    const deletionEvent = finalizeEvent(
+      {
+        kind: 5, // Kind 5 is the standard for deletion events
+        created_at: Math.floor(Date.now() / 1000),
+        content: reason, // Optional reason for deletion
+        tags: [["e", ticketEventId]], // Reference the event to delete
+      },
+      userKeys.privateKey
+    );
+
+    // Step 2: Publish the deletion event to the Nostr relays
+    await publishToRelays(deletionEvent);
+
+    console.log("Ticket deleted successfully:", deletionEvent.id);
+    return deletionEvent;
+  } catch (error) {
+    console.error("Failed to delete ticket:", error);
+    throw error;
+  }
+}
+
+export function nostrEventToTicket(event: NostrEvent): Ticket {
   // Parse the content field
   const parsedContent = JSON.parse(event.content);
 
   // Validate and transform the parsed content if necessary
-  const project: Project = {
+  const ticket: Ticket = {
     uuid: parsedContent.uuid,
-    name: parsedContent.name,
+    projectUuid: parsedContent.projectUuid,
+    title: parsedContent.title,
+    type: parsedContent.type,
     description: parsedContent.description,
-    isPrivate: parsedContent.isPrivate,
+    state: parsedContent.state,
+    parentUuid: parsedContent.parentUuid,
+    creatorPubkey: parsedContent.creatorPubkey,
     createdAt: parsedContent.createdAt,
+    updatedAt: parsedContent.updatedAt,
     lastEventId: event.id,
     lastEventCreatedAt: event.created_at,
-    members: parsedContent.members || [],
-    tickets: parsedContent.tickets || [],
+    childrenUuids: parsedContent.childrenUuids || [],
   };
 
-  return project;
+  return ticket;
 }
 
-export async function getPrivateProject(
+export async function getPrivateTicket(
   rumorEvent: NostrEvent,
   userKeys: UserKeys
-): Promise<Project> {
+): Promise<Ticket> {
   // Extract the encrypted content and nonce from the rumor
   const encryptedContent = rumorEvent.content;
   const conversationKey = nip44.getConversationKey(userKeys.privateKey, rumorEvent.pubkey);
@@ -181,17 +162,22 @@ export async function getPrivateProject(
 
   const parsedContent = JSON.parse(decryptedContent);
   // Validate and transform the parsed content if necessary
-  const project: Project = {
+  const ticket: Ticket = {
     uuid: parsedContent.uuid,
-    name: parsedContent.name,
+    projectUuid: parsedContent.projectUuid,
+    title: parsedContent.title,
+    type: parsedContent.type,
     description: parsedContent.description,
-    isPrivate: parsedContent.isPrivate,
+    state: parsedContent.state,
+    parentUuid: parsedContent.parentUuid,
+    creatorPubkey: parsedContent.creatorPubkey,
     createdAt: parsedContent.createdAt,
+    updatedAt: parsedContent.updatedAt,
     lastEventId: rumorEvent.id,
     lastEventCreatedAt: rumorEvent.created_at,
-    members: parsedContent.members || [],
-    tickets: parsedContent.tickets || [],
+    childrenUuids: parsedContent.childrenUuids || [],
   };
 
-  return project;
+  return ticket;
 }
+

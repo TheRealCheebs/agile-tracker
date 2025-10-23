@@ -1,9 +1,9 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { createIdentity, importIdentity, getPrivateKey, getAllIdentities, setActiveIdentityByName, removeIdentityByKey } from '../identity.js';
+import { createIdentity, importIdentity, getPrivateKey, getAllIdentities, setActiveIdentityByName, removeIdentityByKey } from '@services/prisma/identity.js';
 import { PrismaClient } from '@prisma/client';
 import type { Identity as PrismaIdentity } from '@prisma/client';
-import type { UserKeys } from '../interfaces/identity.js';
+import type { UserKeys } from '@interfaces/identity.js';
 
 const emptyUserKeys: UserKeys = { pubKey: '', privateKey: new Uint8Array() };
 
@@ -35,7 +35,7 @@ export async function mainUsersFlow(prisma: PrismaClient): Promise<UserKeys> {
       if (importedKeys) return importedKeys;
       break;
     case 'List Users':
-      console.log('Listing users...');
+      listUsers(prisma);
       break;
     case 'Switch User':
       const switchedKeys = await switchUser(prisma);

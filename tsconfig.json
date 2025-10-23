@@ -4,7 +4,7 @@
     "esModuleInterop": true,
     "allowImportingTsExtensions": true,
     "emitDeclarationOnly": true,
-    
+
     // Specify ECMAScript target version
     "target": "ESNext",
 
@@ -56,6 +56,14 @@
 
     // JSX settings for React (if applicable)
     "jsx": "react-jsx"
+
+    "baseUrl": "./",
+    "paths": {
+      "@services/*": ["src/services/*"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@utils/*": ["src/utils/*"]
+      "@tui/*": ["src/tui/*"]
+    }
   },
   "include": ["src/**/*"], // Include all TypeScript files in the 'src' directory
   "exclude": ["node_modules", "dist"] // Exclude dependencies and output directory

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import type { Project as PrismaProject } from '@prisma/client';
-import type { Project } from '../../interfaces/project.js';
+import type { Project as PrismaProject, ProjectMember as PrismaProjectMember } from '@prisma/client';
+import type { Project, ProjectMember } from '@interfaces/project.js';
 
 export async function saveNewProject(
   prisma: PrismaClient,
@@ -58,9 +58,13 @@ export async function getProjects(prisma: PrismaClient, pubKey: string): Promise
   });
 }
 
-export async function getProjectById(prisma: PrismaClient, uuid: string): Promise<PrismaProject | null> {
+export async function getProjectById(prisma: PrismaClient, uuid: string): Promise<(PrismaProject & { members: PrismaProjectMember[]; tickets: { uuid: string }[] }) | null> {
   return await prisma.project.findUnique({
-    where: { uuid }
+    where: { uuid },
+    include: {
+      members: true, // Include project members
+      tickets: true, // Include tickets
+    },
   });
 }
 
@@ -111,4 +115,28 @@ export async function updateProject(
       },
     },
   });
+}
+
+function prismaToProjectMember(prismaMember: PrismaProjectMember): ProjectMember {
+  return {
+    projectId: prismaMember.project_uuid,
+    pubKey: prismaMember.pubkey,
+    role: prismaMember.role,
+    createdAt: Number(prismaMember.created_at), // Convert bigint to number
+  };
+}
+
+// Main function to map Prisma Project to general Project
+export function prismaToProject(prismaProject: PrismaProject & { members: PrismaProjectMember[]; tickets: { uuid: string }[] }): Project {
+  return {
+    uuid: prismaProject.uuid,
+    name: prismaProject.name,
+    description: prismaProject.description,
+    isPrivate: prismaProject.is_private, // Map Prisma's snake_case to camelCase
+    createdAt: Number(prismaProject.created_at), // Convert bigint to number
+    lastEventId: prismaProject.last_event_id,
+    lastEventCreatedAt: Number(prismaProject.last_event_created_at), // Convert bigint to number
+    members: prismaProject.members.map(prismaToProjectMember), // Map members
+    tickets: prismaProject.tickets.map((ticket) => ticket.uuid), // Extract ticket UUIDs
+  };
 }

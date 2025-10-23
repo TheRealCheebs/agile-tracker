@@ -45,10 +45,10 @@ model Ticket {
   state                 String    @default("unscheduled")
   parent_uuid           String?
   children_uuids        Json      // this is a list of strings
-  owner_pubkey          String
+  creator_pubkey        String
   created_at            BigInt
   updated_at            BigInt
-  last_event_id         String?
+  last_event_id         String
   last_event_created_at BigInt
   project               Project   @relation(fields: [project_uuid], references: [uuid], onDelete: Cascade)
   parent                Ticket?   @relation("TicketParent", fields: [parent_uuid], references: [uuid], onDelete: SetNull)
