@@ -13,6 +13,7 @@ model Identity {
   created_at BigInt
   last_used  BigInt
   is_active  Boolean  @default(true)
+  projects   Json      // map[project-uuid] is_private
 }
 
 model Project {

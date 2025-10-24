@@ -58,6 +58,34 @@ export async function getProjects(prisma: PrismaClient, pubKey: string): Promise
   });
 }
 
+export async function getTicketUuidsByProjectUuid(prisma: PrismaClient, projectUuid: string): Promise<string[]> {
+  try {
+    // Fetch the project with its tickets
+    const project = await prisma.project.findUnique({
+      where: { uuid: projectUuid },
+      include: {
+        tickets: {
+          select: {
+            uuid: true, // Only fetch the UUIDs of the tickets
+          },
+        },
+      },
+    });
+
+    // If the project doesn't exist, return an empty array
+    if (!project) {
+      console.warn(`Project with UUID ${projectUuid} not found.`);
+      return [];
+    }
+
+    // Map the tickets to extract their UUIDs
+    return project.tickets.map((ticket) => ticket.uuid);
+  } catch (error) {
+    console.error("Error fetching ticket UUIDs:", error);
+    throw error; // Rethrow the error to handle it at a higher level
+  }
+}
+
 export async function getProjectById(prisma: PrismaClient, uuid: string): Promise<(PrismaProject & { members: PrismaProjectMember[]; tickets: { uuid: string }[] }) | null> {
   return await prisma.project.findUnique({
     where: { uuid },

@@ -4,6 +4,7 @@ export interface Identity {
   createdAt: number;
   lastUsed: number;
   isActive: boolean;
+  projects: Map<string, boolean>;
 }
 
 export type UserKeys = {

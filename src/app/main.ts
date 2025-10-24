@@ -1,23 +1,19 @@
 import inquirer from 'inquirer';
 import { PrismaClient } from '@prisma/client';
-import { getActiveUserKeys } from '@services/prisma/identity.js';
 
 import { mainUsersFlow, noUserFlow } from '@tui/user-flows.js';
 import { mainProjectsFlow } from '@tui/project-flows.js';
 import { mainTicketsFlow } from '@tui/ticket-flows.js';
 import { mainSettingsFlow } from '@tui/settings-flows.js';
 import { clearScreen, showHeader, pauseBeforeContinue } from '@tui/ui-utils.js';
+import { closeAllSubscriptions } from '@nostr/sync.js';
 
-import { getProjects, updateProject } from '@services/prisma/project.js';
-import { updateTicket } from '@services/prisma/ticket.js';
-import { subscribeToProjectUpdates } from '../nostr/sync.js';
+import { getActiveUserKeys, getUserProjects } from '@services/prisma/identity.js';
 import { listRelays } from '../settings.js';
 import { initNostr } from '../nostr/utils.js';
 
 import type { UserKeys } from '@interfaces/identity.js';
-import type { SubCloser } from 'nostr-tools/lib/types/abstract-pool';
-
-const subscriptions: SubCloser[] = [];
+import { subscribeAllForUser } from '@services/prisma/subscribe.js';
 
 // Main application loop
 async function main() {
@@ -110,28 +106,7 @@ async function initializeApp(prisma: PrismaClient): Promise<UserKeys | null> {
     userKeys = await noUserFlow(prisma);
   }
 
-  // use the list projects to iterate through and subscribe to all current projects
-  const projects = await getProjects(prisma, userKeys!.pubKey);
-  projects.forEach(project => {
-    const sub: SubCloser = subscribeToProjectUpdates(
-      relays,
-      project.uuid,
-      Date.now(),
-      (projectEvent) => {
-        // TODO all of these need to be converted from nostr events....
-        updateProject(prisma, projectEvent);
-      },
-      (ticketEvent) => {
-        // TODO all of these need to be converted from nostr events....
-        const partial = {
-          title: ticketEvent.id,
-        }
-        updateTicket(prisma, ticketEvent.id, partial);
-      },
-    );
-    // TODO: save these subscriptions to the database? so they can be loaded on startup.
-    subscriptions.push(sub);
-  })
+  subscribeAllForUser(prisma, userKeys, relays);
 
   // Any other initialization tasks
   console.log('✅ Application initialized');
@@ -141,12 +116,8 @@ async function initializeApp(prisma: PrismaClient): Promise<UserKeys | null> {
 async function cleanup() {
   console.log('Cleaning up...');
 
-  subscriptions.forEach(sub => {
-    sub.close();
-  });
+  closeAllSubscriptions();
 
-  // Optionally clear the subscriptions array
-  subscriptions.length = 0;
   // Any other cleanup tasks
   console.log('✅ Cleanup complete');
 }

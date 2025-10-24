@@ -55,13 +55,15 @@ export async function importIdentity(
       data: { is_active: false }
     });
 
+    const projects = new Map();
     return await prisma.identity.create({
       data: {
         pubkey: pubKey,
         name: name,
         created_at: Date.now(),
         last_used: Date.now(),
-        is_active: true
+        is_active: true,
+        projects: JSON.stringify(projects) // not subscribed to any projects on import
       }
     });
   } catch (error) {
@@ -80,13 +82,16 @@ export async function createIdentity(
   const privateKeyHex = bytesToHex(userPrivateKey);
   await keytar.setPassword(SERVICE_NAME, pubKey, privateKeyHex);
 
+  const projects = new Map();
+
   return await prisma.identity.create({
     data: {
       pubkey: pubKey,
       name: name,
       created_at: Date.now(),
       last_used: Date.now(),
-      is_active: true
+      is_active: true,
+      projects: JSON.stringify(projects) // not subscribed to any projects on create
     }
   });
 }
@@ -220,4 +225,93 @@ export async function setActiveIdentityByName(prisma: PrismaClient, name: string
 
     return await tx.identity.findUnique({ where: { name } });
   });
+}
+
+export async function addOrUpdateUserProject(prisma: PrismaClient, pubKey: string, projectUuid: string, isPrivate: boolean): Promise<void> {
+  try {
+    const user = await prisma.identity.findUnique({
+      where: { pubkey: pubKey },
+      select: { projects: true },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${pubKey} not found.`);
+    }
+
+    if (typeof user.projects === "string") {
+      const projects: Map<string, boolean> = new Map(
+        Object.entries(JSON.parse(user.projects))
+      );
+      projects.set(projectUuid, isPrivate); // Add or update the project
+
+      await prisma.identity.update({
+        where: { pubkey: pubKey },
+        data: { projects: JSON.stringify(projects) },
+      });
+    } else {
+      throw new Error("Expected user.projects to be a string.");
+    }
+
+    console.log(`Project ${projectUuid} added/updated for user ${pubKey}.`);
+  } catch (error) {
+    console.error("Error adding/updating project:", error);
+    throw error;
+  }
+}
+
+export async function removeUserProject(prisma: PrismaClient, pubKey: string, projectUuid: string): Promise<void> {
+  try {
+    const user = await prisma.identity.findUnique({
+      where: { pubkey: pubKey },
+      select: { projects: true },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${pubKey} not found.`);
+    }
+
+    if (typeof user.projects === "string") {
+      const projects: Map<string, boolean> = new Map(
+        Object.entries(JSON.parse(user.projects))
+      );
+      projects.delete(projectUuid); // remove
+
+      await prisma.identity.update({
+        where: { pubkey: pubKey },
+        data: { projects: JSON.stringify(projects) },
+      });
+    } else {
+      throw new Error("Expected user.projects to be a string.");
+    }
+
+    console.log(`Project ${projectUuid} removed for user ${pubKey}.`);
+  } catch (error) {
+    console.error("Error removing project:", error);
+    throw error;
+  }
+}
+
+export async function getUserProjects(prisma: PrismaClient, pubKey: string): Promise<Map<string, boolean>> {
+  try {
+    const user = await prisma.identity.findUnique({
+      where: { pubkey: pubKey },
+      select: { projects: true },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${pubKey} not found.`);
+    }
+
+    if (typeof user.projects === "string") {
+      const projects: Map<string, boolean> = new Map(
+        Object.entries(JSON.parse(user.projects))
+      );
+      return projects;
+    } else {
+      throw new Error("Expected user.projects to be a string.");
+    }
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    throw error;
+  }
 }

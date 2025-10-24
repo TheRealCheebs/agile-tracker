@@ -63,6 +63,7 @@
       "@interfaces/*": ["src/interfaces/*"],
       "@utils/*": ["src/utils/*"]
       "@tui/*": ["src/tui/*"]
+      "@nostr/*": ["src/nostr/*"]
     }
   },
   "include": ["src/**/*"], // Include all TypeScript files in the 'src' directory
