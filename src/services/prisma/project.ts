@@ -102,6 +102,89 @@ export async function deleteProject(prisma: PrismaClient, uuid: string): Promise
   });
 }
 
+export async function updateProjectNostrEvent(
+  prisma: PrismaClient,
+  uuid: string,
+  eventId: string,
+  eventCreated: number
+): Promise<void> {
+  try {
+    await prisma.project.update({
+      where: { uuid },
+      data: {
+        last_event_id: eventId,
+        last_event_created_at: BigInt(eventCreated),
+      },
+    });
+    console.log(`Projcet ${uuid} updated successfully after Nostr push.`);
+  } catch (error) {
+    console.error(`Failed to update project ${uuid}:`, error);
+    throw error;
+  }
+}
+export async function addNewTicketToProject(
+  prisma: PrismaClient,
+  projectUuid: string,
+  ticketUuid: string
+): Promise<void> {
+  try {
+    // Ensure the project exists
+    const project = await prisma.project.findUnique({
+      where: { uuid: projectUuid },
+    });
+
+    if (!project) {
+      throw new Error(`Project with UUID ${projectUuid} does not exist.`);
+    }
+
+    // Ensure the ticket exists
+    const ticket = await prisma.ticket.findUnique({
+      where: { uuid: ticketUuid },
+    });
+
+    if (!ticket) {
+      throw new Error(`Ticket with UUID ${ticketUuid} does not exist.`);
+    }
+
+    // Update the project to connect the ticket
+    await prisma.project.update({
+      where: { uuid: projectUuid },
+      data: {
+        tickets: {
+          connect: [{ uuid: ticketUuid }],
+        },
+      },
+    });
+
+    console.log(`Ticket ${ticketUuid} added successfully to project ${projectUuid}.`);
+  } catch (error) {
+    console.error(`Failed to add ticket ${ticketUuid} to project ${projectUuid}:`, error);
+    throw error;
+  }
+}
+
+export async function removeTicketFromProject(
+  prisma: PrismaClient,
+  projectUuid: string,
+  ticketUuid: string
+): Promise<void> {
+  try {
+    await prisma.project.update({
+      where: { uuid: projectUuid },
+      data: {
+        tickets: {
+          disconnect: [{ uuid: ticketUuid }], // Disconnect the ticket from the project
+        },
+      },
+    });
+
+    console.log(`Ticket ${ticketUuid} removed successfully from project ${projectUuid}.`);
+  } catch (error) {
+    console.error(`Failed to remove ticket ${ticketUuid} from project ${projectUuid}:`, error);
+    throw error;
+  }
+}
+
 export async function updateProject(
   prisma: PrismaClient,
   project: Project

@@ -1,11 +1,13 @@
 import inquirer from 'inquirer';
 import { createTicket } from '@services/ticket.js';
-import { saveNewTicket, updateTicket } from '@services/prisma/ticket';
+import { saveNewTicket, updateTicketNostrEvent } from '@services/prisma/ticket';
 import { createAndPublishPrivateTicket, createAndPublishTicket } from '@services/nostr/ticket';
 import { updateAndPublishPrivateProject, updateAndPublishProject } from '@services/nostr/projects';
-import { getProjectById, prismaToProject, updateProject } from '@services/prisma/project';
+import { addNewTicketToProject, getProjectById, prismaToProject, updateProjectNostrEvent } from '@services/prisma/project';
+import { getAllTicketsFromRelay } from '@nostr/utils.js';
 import { PrismaClient } from '@prisma/client';
 import type { UserKeys } from '@interfaces/identity';
+import type { Ticket } from '@interfaces/ticket';
 
 export async function mainTicketsFlow(prisma: PrismaClient, userKeys: UserKeys, projectUuid: string) {
   const { action } = await inquirer.prompt([
@@ -19,6 +21,7 @@ export async function mainTicketsFlow(prisma: PrismaClient, userKeys: UserKeys, 
         'Delete Ticket',
         'Move Ticket',
         'List Tickets',
+        'Show All from Relay',
         'Back to Main Menu',
       ],
     },
@@ -28,22 +31,24 @@ export async function mainTicketsFlow(prisma: PrismaClient, userKeys: UserKeys, 
     case 'Create Ticket':
       // in public project start state is unverified, or member in private
       await createTicketFlow(prisma, userKeys, projectUuid);
-      console.log('Creating ticket...');
       break;
     case 'Edit Ticket':
       // must be admin in public project, or member in private
-      console.log('Edit ticket...');
+      console.log('Edit ticket not done...');
       break;
     case 'Delete Ticket':
       // must be admin in public project, or member in private
-      console.log('Delete ticket...');
+      console.log('Delete ticket not done...');
       break;
     case 'Move Ticket':
       // must be admin in public project, or member in private
-      console.log('Move ticket...');
+      console.log('Move ticket not done...');
       break;
     case 'List Tickets':
-      console.log('List ticket...');
+      console.log('List ticket not done...');
+      break;
+    case 'Show All from Relay':
+      await showAllTicketssOnRelayFlow();
       break;
     case 'Back to Main Menu':
       break;
@@ -103,27 +108,18 @@ async function createTicketFlow(prisma: PrismaClient, userKeys: UserKeys, projec
     try {
       if (project.isPrivate) {
         const privateEvent = await createAndPublishPrivateTicket(ticket, userKeys, project.members);
-        ticket.lastEventId = privateEvent.id;
-        ticket.lastEventCreatedAt = privateEvent.created_at;
-        ticket.updatedAt = privateEvent.created_at;
+        updateTicketNostrEvent(prisma, ticket.uuid, privateEvent.id, privateEvent.created_at);
         // update the project to include the new ticket.
-        project.tickets.push(ticket.uuid);
         const privateProject = await updateAndPublishPrivateProject(project, userKeys, project.members, ticket.uuid, 'ticket');
-        project.lastEventId = privateProject.id;
-        project.lastEventCreatedAt = privateProject.created_at;
+        updateProjectNostrEvent(prisma, project.uuid, privateProject.id, privateProject.created_at);
       } else {
         const event = await createAndPublishTicket(ticket, userKeys);
-        ticket.lastEventId = event.id;
-        ticket.lastEventCreatedAt = event.created_at;
-        ticket.updatedAt = event.created_at;
+        updateTicketNostrEvent(prisma, ticket.uuid, event.id, event.created_at);
         // update the project to include the new ticket.
-        project.tickets.push(ticket.uuid);
         const updatedProject = await updateAndPublishProject(project, userKeys, ticket.uuid, 'ticket');
-        project.lastEventId = updatedProject.id;
-        project.lastEventCreatedAt = updatedProject.created_at;
+        updateProjectNostrEvent(prisma, project.uuid, updatedProject.id, updatedProject.created_at);
       }
-      updateTicket(prisma, ticket);
-      updateProject(prisma, project);
+      addNewTicketToProject(prisma, project.uuid, ticket.uuid);
     } catch (relayError) {
       console.warn(" Failed to send ticket to relay:", relayError)
     }
@@ -135,4 +131,29 @@ async function createTicketFlow(prisma: PrismaClient, userKeys: UserKeys, projec
   }
   return null
 
+}
+
+async function showAllTicketssOnRelayFlow(): Promise<void> {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'limit',
+      message: 'Number of tickets to show'
+    }
+  ]);
+
+  const tickets: Ticket[] = await getAllTicketsFromRelay(answers.limit);
+
+  tickets.forEach((ticket) => {
+    const date = new Date(ticket.lastEventCreatedAt * 1000); // Convert milliseconds to a Date object
+    const createdAt = new Date(ticket.createdAt * 1000); // Convert milliseconds to a Date object
+    // Format the date to a readable string
+    console.log(`Title: ${ticket.title}`);
+    console.log(`Description: ${ticket.description}`);
+    console.log(`Type: ${ticket.type}`);
+    console.log(`Creator: ${ticket.creatorPubkey}`);
+    console.log(`Creator At: ${createdAt}`);
+    console.log(`Last Event ID: ${ticket.lastEventId}`);
+    console.log(`Last Time: ${date}`);
+  });
 }

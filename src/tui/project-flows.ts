@@ -6,7 +6,7 @@ import { createProject } from '@services/project.ts';
 import { saveNewProject, getProjects, updateProject } from '@services/prisma/project.js';
 import { createAndPublishPrivateProject, createAndPublishProject } from '@services/nostr/projects.js';
 import { formatNostrTimestamp } from 'src/nostr/helpers';
-import { getAllProjectsFromRelay } from 'src/nostr/utils';
+import { getAllProjectTicketsFromRelay, getAllProjectsFromRelay } from 'src/nostr/utils';
 
 import type { UserKeys } from '@interfaces/identity';
 import type { Project } from '@interfaces/project';
@@ -27,6 +27,7 @@ export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys)
         // TODO 'Update Project'
         // TODO: add a sync project option
         'Show All From Relay',
+        'Show Tickets in Project From Relay',
         'Back to Main Menu',
       ],
     },
@@ -51,6 +52,9 @@ export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys)
       break;
     case 'Show All From Relay':
       await showAllProjectsOnRelayFlow();
+      break;
+    case 'Show Tickets in Project From Relay':
+      await showAllTicketsInProjectFromRelayFlow(prisma, userKeys.pubKey);
       break;
     case 'Back to Main Menu':
       break;
@@ -320,4 +324,74 @@ async function showAllProjectsOnRelayFlow(): Promise<void> {
       }
     }
   });
+}
+
+async function showAllTicketsInProjectFromRelayFlow(prisma: PrismaClient, pubkey: string): Promise<void> {
+  const projects = await getProjects(prisma, pubkey);
+
+  if (projects.length === 0) {
+    console.log('No projects found.');
+    return;
+  }
+
+  console.table(projects.map(p => ({
+    ID: p.uuid.slice(0, 8),
+    Name: p.name,
+  })));
+
+  const { action } = await inquirer.prompt([{
+    type: 'list',
+    name: 'action',
+    message: 'Select an action:',
+    choices: [
+      'Select Project',
+      'Enter Project',
+      'Back to Main Menu'
+    ]
+  }]);
+
+  if (action === 'Back to Main Menu') {
+    console.log('Action Canceled, not looking up tickets.');
+    return;
+  }
+
+  let project_uuid: string;
+
+  if (action === 'Select Project') {
+    const { project_uuid: selectedProjectUuid } = await inquirer.prompt([{
+      type: 'list',
+      name: 'project_uuid',
+      message: 'Select a project:',
+      choices: projects.map((project) => ({
+        name: project.name,
+        value: project.uuid,
+      })),
+    }]);
+    project_uuid = selectedProjectUuid; // Assign the selected project UUID
+  }
+
+  if (action === 'Enter Project') {
+    const { project_uuid: enteredProjectUuid } = await inquirer.prompt([{
+      type: 'input',
+      name: 'project_uuid',
+      message: 'Input a project:',
+    }]);
+    project_uuid = enteredProjectUuid; // Assign the entered project UUID
+  }
+
+  const tickets = await getAllProjectTicketsFromRelay(project_uuid);
+  tickets.forEach((ticket) => {
+    const date = new Date(ticket.lastEventCreatedAt * 1000); // Convert milliseconds to a Date object
+    const createdAt = new Date(ticket.createdAt * 1000); // Convert milliseconds to a Date object
+    // Format the date to a readable string
+    console.log(`Title: ${ticket.title}`);
+    console.log(`Description: ${ticket.description}`);
+    console.log(`Type: ${ticket.type}`);
+    console.log(`Creator: ${ticket.creatorPubkey}`);
+    console.log(`Creator At: ${createdAt}`);
+    console.log(`Last Event ID: ${ticket.lastEventId}`);
+    console.log(`Last Time: ${date}`);
+  });
+
+  return;
 }

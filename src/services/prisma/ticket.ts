@@ -68,6 +68,28 @@ export async function updateTicketState(
   return result.count > 0;
 }
 
+export async function updateTicketNostrEvent(
+  prisma: PrismaClient,
+  uuid: string,
+  eventId: string,
+  eventCreated: number
+): Promise<void> {
+  try {
+    await prisma.ticket.update({
+      where: { uuid },
+      data: {
+        last_event_id: eventId,
+        last_event_created_at: BigInt(eventCreated),
+        updated_at: BigInt(eventCreated),
+      },
+    });
+    console.log(`Ticket ${uuid} updated successfully after Nostr push.`);
+  } catch (error) {
+    console.error(`Failed to update ticket ${uuid}:`, error);
+    throw error;
+  }
+}
+
 export async function updateTicket(
   prisma: PrismaClient,
   ticket: Ticket,
@@ -109,7 +131,6 @@ export async function updateTicket(
       },
     })
   );
-
 
   // updates.children.forEach(childId => {
   //   transaction.push(

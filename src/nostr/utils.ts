@@ -1,8 +1,10 @@
 import { SimplePool } from "nostr-tools"
 import type { NostrEvent } from 'nostr-tools';
-import { NOSTR_PROJECT_KIND } from "src/constants";
+import { NOSTR_PROJECT_KIND, NOSTR_TICKET_KIND } from "src/constants";
 import { nostrEventToProject } from "@services/nostr/projects.js";
+import { nostrEventToTicket } from "@services/nostr/ticket.js";
 import type { Project } from "@interfaces/project.js";
+import type { Ticket } from "@interfaces/ticket.js";
 
 let pool: SimplePool | null = null; // Global pool instance
 let relays: string[] = []; // Global list of relays
@@ -88,6 +90,72 @@ export async function getAllProjectsFromRelay(limit: number = 10): Promise<Proje
     });
 
     return projects; // Return the array of projects
+  } catch (error) {
+    console.error("Failed to fetch events from any relay:", error);
+    return [];
+  }
+}
+
+export async function getAllTicketsFromRelay(limit: number = 10): Promise<Ticket[]> {
+  if (!pool || relays.length === 0) {
+    throw new Error('Nostr is not initialized. Call initNostr() first.');
+  }
+  try {
+    const events: NostrEvent[] = await pool.querySync(
+      relays,
+      {
+        kinds: [NOSTR_TICKET_KIND],
+        limit: limit,
+      },
+    )
+    const tickets: Ticket[] = [];
+
+    events.forEach((event) => {
+      console.log(` the raw event is ${event}`);
+      try {
+        const ticket = nostrEventToTicket(event); // Convert event to project
+        if (ticket) {
+          tickets.push(ticket); // Push the project onto the array
+        }
+      } catch (error) {
+        console.warn(`Failed to convert event to project: ${event.id}`, error);
+      }
+    });
+
+    return tickets; // Return the array of projects
+  } catch (error) {
+    console.error("Failed to fetch events from any relay:", error);
+    return [];
+  }
+}
+export async function getAllProjectTicketsFromRelay(projectUuid: string, limit: number = 10): Promise<Ticket[]> {
+  console.log(`getting tickets for ${projectUuid}`)
+  if (!pool || relays.length === 0) {
+    throw new Error('Nostr is not initialized. Call initNostr() first.');
+  }
+  try {
+    const events: NostrEvent[] = await pool.querySync(
+      relays,
+      {
+        kinds: [NOSTR_TICKET_KIND],
+        limit: limit,
+        '#project-uuid': [projectUuid],
+      },
+    )
+    const tickets: Ticket[] = [];
+
+    events.forEach((event) => {
+      try {
+        const ticket = nostrEventToTicket(event); // Convert event to project
+        if (ticket) {
+          tickets.push(ticket); // Push the project onto the array
+        }
+      } catch (error) {
+        console.warn(`Failed to convert event to project: ${event.id}`, error);
+      }
+    });
+
+    return tickets; // Return the array of projects
   } catch (error) {
     console.error("Failed to fetch events from any relay:", error);
     return [];
