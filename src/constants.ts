@@ -1,0 +1,3 @@
+export const NOSTR_PROJECT_KIND = 30401;
+export const NOSTR_TICKET_KIND = 30402;
+export const NOSTR_GIFT_WRAP_KIND = 1059;

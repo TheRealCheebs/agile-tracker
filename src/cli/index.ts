@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+/* #!/usr/bin/env node
 
 import { Command } from 'commander';
 import { userCommand } from './userCommands.js';
@@ -20,4 +20,4 @@ if (process.argv.length < 3) {
 
 program.addCommand(userCommand);
 program.addCommand(ticketCommand);
-program.parse();
+program.parse() */;

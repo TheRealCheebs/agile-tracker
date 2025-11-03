@@ -1,7 +1,7 @@
 import {
   createTicket,
   getTickets,
-  updateTicketStatus,
+  updateTicketState,
   deleteTicket
 } from '../ticket';
 import { PrismaClient } from '@prisma/client';
@@ -25,7 +25,7 @@ describe('Ticket Model', () => {
 
     expect(ticket.title).toBe('Test Ticket');
     expect(ticket.description).toBe('Test Description');
-    expect(ticket.status).toBe('backlog');
+    expect(ticket.state).toBe('backlog');
     expect(ticket.owner_pubkey).toBe(testPubkey);
     expect(ticket.uuid).toBeDefined();
     expect(ticket.created_at).toBeGreaterThan(0);
@@ -44,23 +44,23 @@ describe('Ticket Model', () => {
   expect(tickets[1]!.title).toBe('Ticket 1');
   });
 
-  it('should filter tickets by status', async () => {
+  it('should filter tickets by state', async () => {
     await createTicket(prisma, 'Ticket 1', 'Description 1', testPubkey);
     const ticket2 = await createTicket(prisma, 'Ticket 2', 'Description 2', testPubkey);
     await updateTicketStatus(prisma, ticket2.uuid, 'started');
 
-    const backlogTickets = await getTickets(prisma, { status: 'backlog' });
+    const backlogTickets = await getTickets(prisma, { state: 'backlog' });
   expect(backlogTickets.length).toBe(1);
   expect(backlogTickets[0]).toBeDefined();
   expect(backlogTickets[0]!.title).toBe('Ticket 1');
 
-  const startedTickets = await getTickets(prisma, { status: 'started' });
+  const startedTickets = await getTickets(prisma, { state: 'started' });
   expect(startedTickets.length).toBe(1);
   expect(startedTickets[0]).toBeDefined();
   expect(startedTickets[0]!.title).toBe('Ticket 2');
   });
 
-  it('should update ticket status', async () => {
+  it('should update ticket state', async () => {
     const ticket = await createTicket(prisma, 'Test Ticket', 'Test Description', testPubkey);
     const originalUpdatedAt = ticket.updated_at;
 
@@ -72,7 +72,7 @@ describe('Ticket Model', () => {
     const tickets = await getTickets(prisma);
   expect(tickets.length).toBeGreaterThan(0);
   expect(tickets[0]).toBeDefined();
-  expect(tickets[0]!.status).toBe('started');
+  expect(tickets[0]!.state).toBe('started');
   expect(tickets[0]!.updated_at).toBeGreaterThan(originalUpdatedAt);
   });
 
