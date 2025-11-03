@@ -250,8 +250,8 @@ export async function getProjectDetails(prisma: PrismaClient, projectId: string)
     // List project tickets
     console.log("Tickets:");
     if (project.tickets.length > 0) {
-      project.tickets.forEach((ticket, index) => {
-        console.log(`  ${index + 1}. ${ticket}`);
+      project.tickets.forEach((ticket) => {
+        console.log(`  ${ticket.state}: ${ticket.title}`);
       });
     } else {
       console.log("  No tickets available.");
