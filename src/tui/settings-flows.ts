@@ -5,7 +5,7 @@ import { listRelays, modifyRelays } from '../settings.js';
 export async function mainSettingsFlow() {
   const { action } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'rawlist',
       name: 'action',
       message: 'Settings Actions:',
       choices: [
@@ -49,7 +49,7 @@ async function modifyRelaysFlow() {
 
   const { action } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'rawlist',
       name: 'action',
       message: 'Would you like to add or remove a relay?',
       choices: ['Add', 'Remove', 'Cancel'],
@@ -89,7 +89,7 @@ async function modifyRelaysFlow() {
 
     const { relayToRemove } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'rawlist',
         name: 'relayToRemove',
         message: 'Select a relay to remove (or Cancel):',
         choices: [...relays, new inquirer.Separator(), 'Cancel'],

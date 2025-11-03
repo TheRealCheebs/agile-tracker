@@ -57,7 +57,7 @@ async function mainMenu(prisma: PrismaClient, userKeys: UserKeys, currentProject
 
   const { category } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'rawlist',
       name: 'category',
       message: 'Select a category:',
       choices: [

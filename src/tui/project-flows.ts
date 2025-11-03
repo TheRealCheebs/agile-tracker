@@ -16,7 +16,7 @@ export async function mainProjectsFlow(prisma: PrismaClient, userKeys: UserKeys)
 
   const { action } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'rawlist',
       name: 'action',
       message: 'Project Actions:',
       choices: [
@@ -156,7 +156,7 @@ export async function listProjectsFlow(prisma: PrismaClient, pubkey: string) {
   })));
 
   const { action } = await inquirer.prompt([{
-    type: 'list',
+    type: 'rawlist',
     name: 'action',
     message: 'Select an action:',
     choices: [
@@ -167,7 +167,7 @@ export async function listProjectsFlow(prisma: PrismaClient, pubkey: string) {
 
   if (action === 'View Details') {
     const { project_uuid } = await inquirer.prompt([{
-      type: 'list',
+      type: 'rawlist',
       name: 'project_uuid',
       message: 'Select a project:',
       choices: projects.map((project) => ({
@@ -198,7 +198,7 @@ export async function switchProjectsFlow(prisma: PrismaClient, pubkey: string): 
   })));
 
   const { action } = await inquirer.prompt([{
-    type: 'list',
+    type: 'rawlist',
     name: 'action',
     message: 'Select an action:',
     choices: [
@@ -213,7 +213,7 @@ export async function switchProjectsFlow(prisma: PrismaClient, pubkey: string): 
   }
 
   const { project_uuid } = await inquirer.prompt([{
-    type: 'list',
+    type: 'rawlist',
     name: 'project_uuid',
     message: 'Select a project:',
     choices: projects.map((project) => ({
@@ -340,7 +340,7 @@ async function showAllTicketsInProjectFromRelayFlow(prisma: PrismaClient, pubkey
   })));
 
   const { action } = await inquirer.prompt([{
-    type: 'list',
+    type: 'rawlist',
     name: 'action',
     message: 'Select an action:',
     choices: [
@@ -359,7 +359,7 @@ async function showAllTicketsInProjectFromRelayFlow(prisma: PrismaClient, pubkey
 
   if (action === 'Select Project') {
     const { project_uuid: selectedProjectUuid } = await inquirer.prompt([{
-      type: 'list',
+      type: 'rawlist',
       name: 'project_uuid',
       message: 'Select a project:',
       choices: projects.map((project) => ({

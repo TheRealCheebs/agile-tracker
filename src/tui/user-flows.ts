@@ -11,7 +11,7 @@ export async function mainUsersFlow(prisma: PrismaClient): Promise<UserKeys> {
 
   const { action } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'rawlist',
       name: 'action',
       message: 'User Actions:',
       choices: [
