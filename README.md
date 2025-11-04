@@ -1,150 +1,173 @@
-# Agile Tracker with Nostr
+# Agile Tracker (Nostr-powered)
 
-A command-line agile project tracker inspired by Pivotal Tracker, built with TypeScript, SQLite for local storage, and Nostr for decentralized status sharing.
+A command-line agile tracker that uses Nostr events as the canonical, distributed event stream and a local Prisma + SQLite database as an offline cache.
 
-## Features
+This README reflects the current repository layout and common development workflows.
 
-- Create, update, delete, and list tickets
-- Real-time status updates via Nostr protocol
-- Authorization using Nostr cryptographic signatures
-- Local SQLite database for persistence
-- Terminal-based interface (CLI)
+---
 
-## Installation
+## Quick summary
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd agile-tracker
+- Local cache: Prisma + SQLite (file: `prisma/dev.db`).
+- Distributed state: Nostr relays (events are the source of truth).
+- Code organization: domain models in `src/models`, services in `src/services`, Nostr helpers in `src/nostr`, CLI under `src/app` / `src/cli`.
+
+---
+
+## Files & structure (important parts)
+
+```
+src/
+  app/                # CLI entrypoint and wiring (src/app/main.ts)
+  cli/                # command definitions (ticket/user commands)
+  interfaces/         # typed interfaces for domain shapes
+  models/             # domain shapes + mapping helpers (e.g. ticket-data.ts)
+  services/           # business logic and Prisma usage (returns domain models)
+    prisma/           # Prisma-specific helpers
+  nostr/              # nostr helpers, event builders, and sync utilities
+  tui/                # terminal UI flows
+  __tests__/          # unit tests
+prisma/
+  schema.prisma       # Prisma schema
+  dev.db              # local SQLite DB (cache - safe to recreate)
+package.json
+tsconfig.json
+README.md
 ```
 
-2. Install dependencies:
+Files you’ll likely use frequently:
+
+- `src/models/ticket-data.ts` — `TicketData` domain model and prisma <-> domain mapping functions
+- `src/services/ticket.ts` — ticket CRUD and business logic (returns `TicketData`)
+- `src/nostr/sync.ts` — subscription helpers (emit events via callbacks)
+- `src/nostr/ticket-events.ts` — create/publish signed Nostr events for tickets
+
+---
+
+## Install & setup
+
+1. Clone repo and install:
+
 ```bash
+git clone <repo-url>
+cd agile-tracker
 npm install
 ```
 
-3. Build the project:
+2. Generate Prisma client (after schema changes):
+
 ```bash
-npm run build
+npx prisma generate
+npx prisma db push
 ```
 
-## Running Tests
+If you accidentally delete `prisma/dev.db` or want a clean slate, remove `prisma/migrations` and `prisma/dev.db` and re-run `npx prisma migrate dev` or `npx prisma db push`.
 
-To run the test suite:
+---
+
+## Scripts
+
+- `npm run build` — compile TypeScript (`tsc`)
+- `npm run dev` — run in dev mode with `ts-node` (entry: `src/index.ts`)
+- `npm run test` — run unit tests (Vitest)
+- `npm run cli` — run the CLI via `npx tsx ./src/app/main.ts`
+- `npm run db:push` — push Prisma schema to the DB
+
+---
+
+## TUI (terminal UI) usage
+
+The primary user interface is a terminal-based UI (TUI). Run it with:
+
+```bash
+npm run cli
+```
+
+This launches the interactive TUI implemented under `src/tui` and wired from `src/app/main.ts`.
+
+Notes:
+- Legacy non-interactive CLI command handlers are still present under `src/cli` (useful for scripts or ad-hoc commands), but the TUI is the recommended entrypoint for day-to-day use.
+- If you want to run a specific CLI command directly you can still use the `npm run cli -- <command>` form (it delegates to the same app wiring).
+
+---
+
+## Development patterns: Nostr + local cache
+
+This project intentionally separates concerns:
+
+- `src/nostr/*` handles Nostr-specific jobs: creating events, signing, publishing, and subscription helpers.
+- Subscription helpers (e.g. `subscribeToProjectUpdates`) are database-agnostic and accept callbacks. Your app code (CLI or services) registers callbacks which persist changes to Prisma.
+- `src/services/*` contain the single source of truth for how to store domain models locally (mapping, CRUD and validation).
+
+Recommended sync pattern:
+
+1. Subscribe to project-level events (tagged with `#project` and `['updated', <uuid>]`).
+2. When a project event arrives, inspect tags to find which ticket(s) or member(s) changed.
+3. Query the relays for the specific ticket event(s) using a `#d` filter and apply the resulting event payload via your service layer to Prisma.
+
+This lets the Nostr event stream remain canonical while your local DB is a fast offline cache.
+
+---
+
+## Testing
+
+Run unit tests:
+
 ```bash
 npm test
 ```
 
-For watch mode:
-```bash
-npm run test:watch
-```
+Tests live in `src/__tests__` and use Vitest.
 
-For test coverage:
-```bash
-npm run test:coverage
-```
+---
 
-## Usage
+## Notes & recommendations
 
-The CLI provides several commands to manage your agile project.
+- Keep domain models in `src/models` and avoid importing Prisma types directly in the rest of the app. Use mapping helpers instead.
+- Keep Nostr publishing/finalization in `src/nostr` and the rest of your app database-agnostic by emitting updates via callbacks.
+- If you need to reset the local DB during development, removing `prisma/dev.db` and re-running `npx prisma db push` is the quickest route.
 
+---
 
-### CLI Usage
+---
 
-Run the CLI (TypeScript, using tsx):
-```bash
-npm run cli -- <command>
-```
+## Getting started (quick walkthrough)
 
-#### User Commands
+A minimal flow to create a project, add a ticket, publish an update, and see it picked up via sync.
 
-- `user add --name <name>`: Add a new user/identity
-- `user list`: List all users
-- `user set-active --name <name>`: Set a user as active
-- `user remove --name <name>`: Remove a user by name
-
-#### Ticket Commands
-
-- `ticket list [--status <status>]`: List all tickets or filter by status
-- `ticket add`: Add a new ticket (prompts for title/description)
-- `ticket update`: Update a ticket's status (prompts for ticket and status)
-- `ticket delete`: Delete a ticket (prompts for ticket)
-
-Example:
-```bash
-npm run cli -- user add --name Alice
-npm run cli -- ticket list --status started
-```
-
-## Architecture
-
-- **TypeScript**: The entire project is written in TypeScript for type safety and modern JavaScript features.
-- **SQLite**: Tickets are stored locally in a SQLite database (`tracker.db`).
-- **Nostr**: Status updates are shared via the Nostr protocol. Each update is signed with the user's private key to ensure authorization.
-
-### Database Schema
-
-The `tickets` table has the following columns:
-
-- `id`: Primary key (auto-increment)
-- `uuid`: Unique identifier for the ticket (UUID)
-- `title`: Ticket title
-- `description`: Ticket description (optional)
-- `status`: Current status (backlog, started, finished, delivered, accepted, rejected)
-- `assignee`: Assigned user (optional)
-- `created_at`: Creation timestamp
-- `updated_at`: Last update timestamp
-- `owner_pubkey`: Nostr public key of the ticket owner
-
-### Nostr Integration
-
-- **Event Kind**: Custom event kind `30402` is used for ticket updates.
-- **Tags**: Each event includes:
-  - `d`: The ticket UUID
-  - `status`: The new status
-- **Authorization**: Only the ticket owner (identified by their public key) can publish updates for a ticket. Updates are verified using the signature.
-
-## Development
-
-To run the project in development mode (using `ts-node`):
+1) Start the TUI (recommended):
 
 ```bash
-npm run dev
+npm run cli
 ```
 
-## Project Structure
+## Running a local Nostr relay (for testing)
 
-```
-agile-tracker/
-├── src/
-│   ├── __tests__/            # Test files
-│   ├── cli/
-│   │   ├── index.ts          # CLI entry point
-│   │   ├── userCommands.ts   # User/identity CLI commands
-│   │   └── ticketCommands.ts # Ticket CLI commands
-│   ├── identity.ts           # Identity/user logic
-│   ├── ticket.ts             # Ticket model and operations
-│   ├── nostr.ts              # Nostr protocol integration
-│   └── index.ts              # (optional) App entry point
-├── prisma/
-│   ├── schema.prisma         # Prisma schema
-│   └── dev.db                # SQLite database
-├── .gitignore                # Git ignore rules
-├── package.json              # Project dependencies and scripts
-├── README.md                 # This file
-└── tsconfig.json             # TypeScript configuration
+You can run a local relay for development. Here's a minimal Docker Compose template — pick a relay image you trust (Rust/Go/Node implementations are available).
+
+```yaml
+version: '3.7'
+services:
+  nostr-relay:
+    image: federatedai/nostr-relay:latest # replace with a known relay image
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    environment:
+      - PORT=7000
+    volumes:
+      - ./relay-data:/data
+
+# Start with:
+# docker compose up -d
 ```
 
-## Contributing
+Point your app at `wss://localhost:7000` in your `relays` array and test publishing/subscribing locally.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+Notes:
+- Relay images and env var names vary between implementations; consult the relay project's README for specifics.
+- Public relays are fine for quick tests but avoid sensitive data when using public relays.
 
-## License
+---
 
-MIT
+License: MIT
