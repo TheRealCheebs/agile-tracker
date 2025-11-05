@@ -7,8 +7,8 @@ import { ticketCommand } from './ticketCommands.js';
 const program = new Command();
 
 program
-  .name('agile-tracker')
-  .description('Agile project tracker with Nostr integration')
+  .name('nostrtrack')
+  .description('Nostr native agile project tracker')
   .version('1.0.0');
 
 
