@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import type { Identity as PrismaIdentity } from '@prisma/client';
 import type { UserKeys } from '@interfaces/identity.js';
 
-const SERVICE_NAME = 'agile-tracker';
+const SERVICE_NAME = 'nostrtrack';
 
 export async function getActiveUserKeys(prisma: PrismaClient): Promise<UserKeys | null> {
   try {

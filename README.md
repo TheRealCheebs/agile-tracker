@@ -1,6 +1,6 @@
-# Agile Tracker (Nostr-native, TUI-first)
+# NostrTrack (Nostr-native, TUI-first)
 
-Agile Tracker is a Nostr-native, terminal-first project tracker built for small distributed teams. It treats Nostr events as the canonical, censorship-resistant event stream and uses a local Prisma + SQLite database as an optional offline cache and working set. Identity is pubkey-first (Nostr keys), and projects/tickets use UUIDs so they can be created and referenced safely across disconnected peers.
+NostrTrack is a Nostr-native, terminal-first project tracker built for small distributed teams. It treats Nostr events as the canonical, censorship-resistant event stream and uses a local Prisma + SQLite database as an optional offline cache and working set. Identity is pubkey-first (Nostr keys), and projects/tickets use UUIDs so they can be created and referenced safely across disconnected peers.
 
 This README documents the repository layout, development workflows, and the recommended sync pattern between Nostr relays and the local cache.
 
@@ -29,7 +29,7 @@ Small distributed teams face significant challenges with existing project manage
 - **Centralized Dependencies:** Most tools require centralized infrastructure, creating single points of failure
 
 ### Solution
-agile-tracker is a lightweight, Nostr-native project tracking system designed specifically for small distributed teams. It combines:
+NostrTrack is a lightweight, Nostr-native project tracking system designed specifically for small distributed teams. It combines:
 
 - **Decentralized Architecture:** Built on Nostr for censorship-resistant data storage and user authentication
 - **CLI/TUI-First Workflow:** Terminal-based interface for speed, privacy, and low-resource environments
@@ -104,7 +104,7 @@ Files you’ll likely use frequently:
 
 ```bash
 git clone <repo-url>
-cd agile-tracker
+cd nostrtrack
 npm install
 ```
 
