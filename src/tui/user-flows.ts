@@ -57,7 +57,7 @@ export async function noUserFlow(prisma: PrismaClient): Promise<UserKeys> {
   while (running) {
     console.log('No active user found. Please create or import a user.');
     const { action } = await inquirer.prompt([{
-      type: 'list',
+      type: 'rawlist',
       name: 'action',
       message: 'What would you like to do?',
       choices: [

@@ -21,6 +21,10 @@ build/
 *.sqlite
 *.sqlite3
 
+# Dev containers
+dev/config.toml
+dev/data
+
 # Logs
 logs/
 *.log

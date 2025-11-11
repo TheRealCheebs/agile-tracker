@@ -8,7 +8,7 @@ import { mainSettingsFlow } from '@tui/settings-flows.js';
 import { clearScreen, showHeader, pauseBeforeContinue } from '@tui/ui-utils.js';
 import { closeAllSubscriptions } from '@nostr/sync.js';
 
-import { getActiveUserKeys, getUserProjects } from '@services/prisma/identity.js';
+import { getActiveUserKeys } from '@services/prisma/identity.js';
 import { listRelays } from '../settings.js';
 import { initNostr } from '../nostr/utils.js';
 

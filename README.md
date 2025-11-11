@@ -25,7 +25,7 @@ The full development quickstart, environment notes, and contributor guidelines l
 ### Quick install (short)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/TheRealCheebs/nostrtrack.git
 cd nostrtrack
 npm install
 cp .env.example .env   # optional: uses local sqlite at prisma/dev.db
@@ -66,7 +66,7 @@ npm run tui
 
 ## Running a local Nostr relay (for testing)
 
-For reproducible local testing we include a Compose file at `dev/docker-compose.yml`. It uses `nostr-rs-relay` by default and maps the relay to `wss://localhost:7000`.
+For reproducible local testing we include a Compose file at `dev/docker-compose.yml`. It uses scsibus's `nostr-rs-relay` by default and maps the relay to `wss://localhost:7000`.
 
 Start the relay with Docker Compose:
 
@@ -78,19 +78,18 @@ If you use Podman, your existing command works too (equivalent form):
 
 ```bash
 podman run -it --rm -p 7000:8080 \
-  --user=100:100 \
-  -v $(pwd)/data:/usr/src/app/db:Z \
-  -v $(pwd)/config.toml:/usr/src/app/config.toml:ro,Z \
-  --name nostr-relay nostr-rs-relay:latest
+  -v $(pwd)/data:/usr/src/app/db \
+  -v $(pwd)/config.toml:/usr/src/app/config.toml:ro \
+  --name nostr-relay docker.io/scsibug/nostr-rs-relay:0.9.0
 ```
 
-Default relay URL: `wss://localhost:7000` — add this URL to your relays configuration so the app will connect. You can either:
+Default relay URL: `ws://localhost:7000` — add this URL to your relays configuration so the app will connect. You can either:
 
-- Open the TUI → Settings → Modify Relays and add `wss://localhost:7000`, or
+- Open the TUI → Settings → Modify Relays and add `ws://localhost:7000`, or
 - Create `~/.config/nostrtrack/relays.json` with:
 
 ```json
-{ "relays": ["wss://localhost:7000"] }
+{ "relays": ["ws://localhost:7000"] }
 ```
 
 License: MIT

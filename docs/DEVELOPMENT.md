@@ -14,7 +14,7 @@ This file is a concise checklist for getting the project running locally for dev
 ### 1) Clone and install dependencies
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/TheRealCheebs/nostrtrack.git
 cd nostrtrack
 npm install
 ```
@@ -117,12 +117,12 @@ If you want a reproducible local relay for testing, start the included compose f
 docker compose -f dev/docker-compose.yml up -d
 ```
 
-**Default relay URL:** `wss://localhost:7000`
+**Default relay URL:** `ws://localhost:7000`
 
 Add that to your relays config so the app will connect (TUI → Settings → Modify Relays), or create `~/.config/nostrtrack/relays.json` with:
 
 ```json
-{ "relays": ["wss://localhost:7000"] }
+{ "relays": ["ws://localhost:7000"] }
 ```
 
 Before starting the relay, provide a minimal `config.toml` and a `data` directory. A sample `dev/config.toml.example` is included — copy it to the project root:

@@ -1,21 +1,90 @@
-# Example config for nostr-rs-relay
-# This is a minimal example to run a local relay for development.
-# Check your relay implementation's docs for full configuration options.
+# Nostr-rs-relay configuration,
+# See the config.toml at the scsibug nostr-rs-relay repo for more options.
+# This configuration represents the minimal for testing needs.
 
-# Bind settings
-bind_address = "0.0.0.0"
+[info]
+# The advertised URL for the Nostr websocket.
+#relay_url = "wss://nostr.example.com/"
+
+# Relay information for clients.
+name = "nostr-rs-relay"
+
+# Description
+description = "A Nostr relay for NostrTrack"
+
+[database]
+engine = "sqlite"
+data_directory = "/usr/src/app/db"
+
+[logging]
+# Directory to store log files.  Log files roll over daily.
+#folder_path = "/usr/src/app/log"
+#file_prefix = "nostr-relay"
+
+[network]
+# Bind to this network address
+address = "0.0.0.0"
+# Listen on this port
 port = 8080
 
-# Logging
-log_level = "info"
+[options]
+# Reject events that have timestamps greater than this many seconds in
+# the future.  Recommended to reject anything greater than 30 minutes
+# from the current time, but the default is to allow any date.
+reject_future_seconds = 1800
 
-# Database / storage path used by the relay (inside container)
-# The compose file mounts `./data` to `/usr/src/app/db`, so a typical
-# path below would be inside that directory.
-database_path = "/usr/src/app/db/nostr-relay.db"
+[limits]
 
-# Simple CORS/allowed origins example (adjust as needed)
-allowed_origins = ["*"]
+# Event kind blacklist. Events with these kinds will be discarded.
+#event_kind_blacklist = [
+#    70202,
+#]
 
-# Additional settings may be required by your chosen relay implementation.
-# Use this file as a starting point and consult the relay project's docs.
+# Event kind allowlist. Events other than these kinds will be discarded.
+#event_kind_allowlist = [
+#    0, 1, 2, 3, 7, 40, 41, 42, 43, 44, 30023,
+#]
+
+# Rejects imprecise requests (kind only and author only etc)
+# This is a temperary measure to improve the adoption of outbox model
+# Its recommended to have this enabled
+limit_scrapers = false
+
+[authorization]
+# Pubkey addresses in this array are whitelisted for event publishing.
+# Only valid events by these authors will be accepted, if the variable
+# is set.
+#pubkey_whitelist = [
+#  "35d26e4690cbe1a898af61cc3515661eb5fa763b57bd0b42e45099c8b32fd50f",
+#  "887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072",
+#]
+# Enable NIP-42 authentication
+#nip42_auth = false
+# Send DMs (kind 4 and 44) and gift wraps (kind 1059) only to their authenticated recipients
+#nip42_dms = false
+
+[verified_users]
+# NIP-05 verification of users.  Can be "enabled" to require NIP-05
+# metadata for event authors, "passive" to perform validation but
+# never block publishing, or "disabled" to do nothing.
+#mode = "disabled"
+
+# Domain names that will be prevented from publishing events.
+#domain_blacklist = ["wellorder.net"]
+
+# Domain names that are allowed to publish events.  If defined, only
+# events NIP-05 verified authors at these domains are persisted.
+#domain_whitelist = ["example.com"]
+
+# Consider an pubkey "verified" if we have a successful validation
+# from the NIP-05 domain within this amount of time.  Note, if the
+# domain provides a successful response that omits the account,
+# verification is immediately revoked.
+#verify_expiration = "1 week"
+
+# How long to wait between verification attempts for a specific author.
+#verify_update_frequency = "24 hours"
+
+# How many consecutive failed checks before we give up on verifying
+# this author.
+#max_consecutive_failures = 20
