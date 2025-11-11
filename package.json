@@ -3,19 +3,20 @@
   "version": "0.0.1",
   "main": "index.js",
   "type": "module",
-  "start": "node dist/index.js",
   "scripts": {
+    "start": "node dist/index.js",
+    "prepare": "husky install",
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "test": "vitest run",
     "test:ui": "vitest",
     "db:push": "prisma db push",
     "prisma:clean": "rm -rf node_modules && rm -rf prisma/generated && npm install && npx prisma generate",
-    "cli": "npx tsx ./src/app/main.ts"
+    "tui": "npx tsx ./src/app/main.ts"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "TheRealCheebs",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.17.0",
@@ -37,6 +38,9 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "prisma": "^6.17.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "husky": "^8.0.0",
+    "@commitlint/config-conventional": "^17.0.0",
+    "@commitlint/cli": "^17.0.0"
   }
 }

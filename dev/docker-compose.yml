@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  nostr-relay:
+    image: nostr-rs-relay:latest
+    container_name: nostr-relay
+    user: "100:100"
+    restart: unless-stopped
+    ports:
+      - "7000:8080"  # host:container (nostr-rs-relay listens on 8080 inside the container)
+    environment:
+      - PORT=8080
+    volumes:
+      - ./data:/usr/src/app/db:Z
+      - ./config.toml:/usr/src/app/config.toml:ro,Z

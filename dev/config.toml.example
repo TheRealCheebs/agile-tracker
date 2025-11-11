@@ -1,0 +1,21 @@
+# Example config for nostr-rs-relay
+# This is a minimal example to run a local relay for development.
+# Check your relay implementation's docs for full configuration options.
+
+# Bind settings
+bind_address = "0.0.0.0"
+port = 8080
+
+# Logging
+log_level = "info"
+
+# Database / storage path used by the relay (inside container)
+# The compose file mounts `./data` to `/usr/src/app/db`, so a typical
+# path below would be inside that directory.
+database_path = "/usr/src/app/db/nostr-relay.db"
+
+# Simple CORS/allowed origins example (adjust as needed)
+allowed_origins = ["*"]
+
+# Additional settings may be required by your chosen relay implementation.
+# Use this file as a starting point and consult the relay project's docs.

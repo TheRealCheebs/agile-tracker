@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'tracker-app');
+const CONFIG_DIR = path.join(os.homedir(), '.config', 'nostrtrack');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'relays.json');
 
 async function ensureConfigDir() {
