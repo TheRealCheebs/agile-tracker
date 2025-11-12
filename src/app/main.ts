@@ -50,6 +50,7 @@ async function main() {
   // Cleanup before exit
   await cleanup();
   console.log('\n👋 Goodbye!');
+  process.exit(0);
 }
 
 async function mainMenu(prisma: PrismaClient, userKeys: UserKeys, currentProjectUuid: string): Promise<[UserKeys, string, boolean]> {
