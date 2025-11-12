@@ -1,10 +1,11 @@
-import { SimplePool } from "nostr-tools"
+import { nip19, SimplePool } from "nostr-tools"
 import type { NostrEvent } from 'nostr-tools';
 import { NOSTR_PROJECT_KIND, NOSTR_TICKET_KIND } from "src/constants";
 import { nostrEventToProject } from "@services/nostr/projects.js";
 import { nostrEventToTicket } from "@services/nostr/ticket.js";
 import type { Project } from "@interfaces/project.js";
 import type { Ticket } from "@interfaces/ticket.js";
+import type { UserKeys } from "@interfaces/identity.js";
 
 let pool: SimplePool | null = null; // Global pool instance
 let relays: string[] = []; // Global list of relays
@@ -32,6 +33,12 @@ export async function initNostr(relayUrls: string[]): Promise<void> {
   }
 }
 
+export function convertForNIP19(userKeys: UserKeys): { nsec: string, npub: string } {
+  const nsec = nip19.nsecEncode(userKeys.privateKey);
+  const npub = nip19.npubEncode(userKeys.pubKey);
+
+  return { nsec, npub };
+}
 /**
  * Publish an event to all configured relays.
  * @param event - The Nostr event to publish.

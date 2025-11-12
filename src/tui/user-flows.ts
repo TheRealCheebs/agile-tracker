@@ -1,9 +1,10 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { createIdentity, importIdentity, getPrivateKey, getAllIdentities, setActiveIdentityByName, removeIdentityByKey } from '@services/prisma/identity.js';
+import { createIdentity, importIdentity, getPrivateKey, getAllIdentities, getActiveUserKeys, setActiveIdentityByName, removeIdentityByKey } from '@services/prisma/identity.js';
 import { PrismaClient } from '@prisma/client';
 import type { Identity as PrismaIdentity } from '@prisma/client';
 import type { UserKeys } from '@interfaces/identity.js';
+import { convertForNIP19 } from '@nostr/utils';
 
 const emptyUserKeys: UserKeys = { pubKey: '', privateKey: new Uint8Array() };
 
@@ -17,6 +18,7 @@ export async function mainUsersFlow(prisma: PrismaClient): Promise<UserKeys> {
       choices: [
         'Create User',
         'Import User',
+        'Export Active User',
         'List Users',
         'Switch User',
         'Delete User',
@@ -33,6 +35,9 @@ export async function mainUsersFlow(prisma: PrismaClient): Promise<UserKeys> {
     case 'Import User':
       const importedKeys = await importUser(prisma);
       if (importedKeys) return importedKeys;
+      break;
+    case 'Export Active User':
+      await exportUser(prisma);
       break;
     case 'List Users':
       listUsers(prisma);
@@ -144,6 +149,17 @@ async function importUser(prisma: PrismaClient): Promise<UserKeys | null> {
   }
 
   return { pubKey: userPubkey, privateKey: userPrivateKey }
+}
+async function exportUser(prisma: PrismaClient): Promise<void> {
+  const keys = await getActiveUserKeys(prisma)
+  if (!keys) {
+    return;
+  }
+  const readable = convertForNIP19(keys);
+  console.log(chalk.bold.blue('npub:'));
+  console.log(`${chalk.cyan(readable.npub)}`);
+  console.log(chalk.bold.blue('nsec:'));
+  console.log(`${chalk.cyan(readable.nsec)}`);
 }
 
 async function listUsers(prisma: PrismaClient): Promise<void> {

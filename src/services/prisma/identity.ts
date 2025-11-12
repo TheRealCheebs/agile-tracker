@@ -72,7 +72,6 @@ export async function importIdentity(
   }
 }
 
-
 export async function createIdentity(
   prisma: PrismaClient,
   name: string
